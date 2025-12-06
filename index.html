@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Povnuj MapCZ</title>
+    
+    <!-- Mapy.cz API -->
+    <script type="text/javascript" src="https://api.mapy.cz/loader.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; background: #fff; }
+        
+        #map-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: none; background: #eee; }
+        #close-map-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #34495e; color: white; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 30; display: none; font-weight: 600; cursor: pointer; align-items: center; gap: 8px; }
+
+        #main-view { display: flex; flex-direction: column; height: 100%; padding: 20px; box-sizing: border-box; background: #fff; z-index: 10; }
+
+        /* HEADER */
+        .header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; height: 50px; }
+        .header-title-group { display: flex; align-items: center; gap: 10px; }
+        h2 { margin: 0; font-size: 22px; color: #333; font-weight: 700; }
+        .count-badge { background: #f0f0f0; padding: 4px 10px; border-radius: 12px; font-size: 14px; font-weight: bold; color: #555; }
+        
+        #header-stats { display: none; flex-direction: column; align-items: flex-end; justify-content: center; background: #e1f5fe; padding: 6px 12px; border-radius: 8px; }
+        .stat-time { font-size: 15px; font-weight: 700; color: #0277bd; line-height: 1.2; }
+        .stat-dist { font-size: 12px; font-weight: 500; color: #546e7a; }
+
+        .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .input-wrapper { position: relative; flex-grow: 1; }
+        input[type="text"] { width: 100%; padding: 16px; border: 2px solid #eee; border-radius: 12px; font-size: 16px; box-sizing: border-box; background: #fbfbfb; transition: border 0.2s; }
+        input:focus { border-color: #3498db; outline: none; background: #fff; }
+
+        #geo-btn { width: 56px; flex-shrink: 0; background: #eaf2f8; color: #3498db; border: 2px solid #d4e6f1; border-radius: 12px; cursor: pointer; font-size: 24px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; }
+        #geo-btn:active { background: #d4e6f1; }
+        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        button { border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; margin-bottom: 10px; }
+        #add-btn { background: #e8f5e9; color: #27ae60; margin-bottom: 20px; }
+        #add-btn:active { background: #c8e6c9; }
+        #sort-btn { background: #fef9e7; color: #f39c12; margin: 0; }
+        #map-btn { background: #eaf2f8; color: #3498db; margin: 0; }
+        #nav-btn { background: #e74c3c; color: white; margin-top: 10px; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); margin-bottom: 0; }
+        #nav-btn:active { transform: scale(0.98); }
+
+        #address-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; margin-bottom: 20px; }
+        #address-list li { 
+            padding: 12px 10px; 
+            border-bottom: 1px solid #f5f5f5; 
+            display: flex; 
+            align-items: center; 
+            font-size: 16px; 
+            background: #fff;
+            touch-action: none; 
+        }
+        
+        .sortable-ghost { opacity: 0.4; background: #e3f2fd; }
+        .sortable-drag { background: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+
+        .handle {
+            color: #bbb;
+            cursor: grab;
+            /* padding: 10px; */
+            font-size: 20px;
+            margin-right: 5px;
+            touch-action: none;
+        }
+
+        .badge { background: #f0f0f0; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; margin-right: 12px; color: #555; flex-shrink: 0; }
+        .text { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .del { color: #e74c3c; padding: 10px; font-size: 22px; cursor: pointer; }
+        
+        .empty-state { text-align: center; color: #999; margin-top: 50px; font-size: 15px; display: block; }
+        .smap-suggest { z-index: 9999 !important; font-size: 16px !important; }
+    </style>
+</head>
+<body>
+
+    <div id="map-container"></div>
+    <div id="close-map-btn" onclick="closeMap()"><span>✕</span> Закрити карту</div>
+
+    <div id="main-view">
+        <div class="header">
+            <div class="header-title-group">
+                <h2>Мій маршрут</h2>
+                <span class="count-badge" id="count">0</span>
+            </div>
+            <div id="header-stats">
+                <div class="stat-time" id="stat-time">--:--</div>
+                <div class="stat-dist" id="stat-dist">-- км</div>
+            </div>
+        </div>
+
+        <div class="input-row">
+            <div class="input-wrapper">
+                <input type="text" id="address-input" placeholder="Введіть адресу..." autocomplete="off" />
+            </div>
+            <button id="geo-btn" onclick="addCurrentLocation()">
+                <span id="geo-icon">📍</span>
+                <div id="geo-spinner" class="spinner"></div>
+            </button>
+        </div>
+
+        <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
+
+        <ul id="address-list"></ul>
+        <div class="empty-state" id="empty-msg">Додайте адреси або натисніть 📍</div>
+
+        <div class="action-grid">
+            <button id="sort-btn" onclick="optimizePointsOrder()">🔃 Сортувати</button>
+            <button id="map-btn" onclick="openMap()">🗺 На карту</button>
+        </div>
+
+        <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
+    </div>
+
+    <script type="text/javascript">
+        let m, routeLayer, markerLayer;
+        let points = [];
+        let suggest;
+        let mapInitialized = false;
+        let lastSuggestedCoords = null;
+        let sortable; 
+
+        function init() {
+            const input = document.getElementById("address-input");
+            
+            // 1. Suggest
+            suggest = new SMap.Suggest(input, {
+                provider: new SMap.SuggestProvider({
+                    updateParams: params => { params.count = 5; params.lang = 'uk'; }
+                })
+            });
+            suggest.addListener("suggest", (suggestData) => {
+                const data = suggestData.data;
+                lastSuggestedCoords = SMap.Coords.fromWGS84(data.longitude, data.latitude);
+            });
+            input.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") addAddress();
+            });
+
+            // 2. SortableJS (Drag & Drop)
+            const list = document.getElementById('address-list');
+            sortable = Sortable.create(list, {
+                handle: '.handle', 
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                onEnd: function (evt) {
+                    // evt.oldIndex -> evt.newIndex
+                    const item = points.splice(evt.oldIndex, 1)[0];
+                    points.splice(evt.newIndex, 0, item);
+                    
+                    // recalculate indexes
+                    renderList(); 
+                    calculateRoute(true); 
+                }
+            });
+        }
+
+        async function addAddress() {
+            const input = document.getElementById("address-input");
+            const val = input.value.trim();
+            if (!val) return;
+
+            let coords = null;
+            let label = val;
+
+            if (lastSuggestedCoords) {
+                coords = lastSuggestedCoords;
+                lastSuggestedCoords = null;
+            }
+
+            if (!coords) {
+                const res = await geocode(val);
+                if (!res) return;
+                coords = res.coords;
+                label = res.label;
+            }
+
+            points.push({ coords, label });
+            renderList();
+            input.value = "";
+            document.getElementById("header-stats").style.display = "none";
+        }
+
+        function geocode(addr) {
+            return new Promise(resolve => {
+                new SMap.Geocoder(addr, g => {
+                    const res = g.getResults()[0]?.results;
+                    if(res?.length) resolve({ coords: res[0].coords, label: res[0].label });
+                    else { alert("Не знайдено цю адресу"); resolve(null); }
+                });
+            });
+        }
+
+        function renderList() {
+            const list = document.getElementById("address-list");
+            const empty = document.getElementById("empty-msg");
+            list.innerHTML = ""; 
+            
+            if (points.length === 0) {
+                empty.style.display = "block";
+            } else {
+                empty.style.display = "none";
+                points.forEach((p, i) => {
+                    const li = document.createElement("li");
+                    li.innerHTML = `
+                        <div class="handle">☰</div>
+                        <div class="badge">${i+1}</div>
+                        <div class="text">${p.label}</div>
+                        <div class="del" onclick="removePoint(${i})">✕</div>
+                    `;
+                    list.appendChild(li);
+                });
+            }
+            document.getElementById("count").innerText = points.length;
+        }
+
+        function removePoint(i) {
+            points.splice(i, 1);
+            renderList();
+            document.getElementById("header-stats").style.display = "none";
+        }
+
+        function initMap() {
+            const center = SMap.Coords.fromWGS84(15.4, 49.8);
+            m = new SMap(document.getElementById("map-container"), center, 7);
+            m.addDefaultLayer(SMap.DEF_BASE).enable();
+            m.addDefaultControls();
+            routeLayer = new SMap.Layer.Geometry(); m.addLayer(routeLayer); routeLayer.enable();
+            markerLayer = new SMap.Layer.Marker(); m.addLayer(markerLayer); markerLayer.enable();
+        }
+
+        function openMap() {
+            if (points.length === 0) return alert("Спочатку додайте точки!");
+            document.getElementById("map-container").style.display = "block";
+            document.getElementById("close-map-btn").style.display = "flex";
+            if (!mapInitialized) { initMap(); mapInitialized = true; } else { m.sync(); }
+            calculateRoute();
+        }
+
+        function closeMap() {
+            document.getElementById("map-container").style.display = "none";
+            document.getElementById("close-map-btn").style.display = "none";
+        }
+
+        function calculateRoute(isBackground = false) {
+            if (points.length < 2) return;
+            const coords = points.map(p => p.coords);
+            
+            SMap.Route.route(coords, { geometry: true, criterion: 'short' }).then(route => {
+                const results = route.getResults();
+                updateStatsUI(results.length, results.time);
+
+                if (!isBackground) {
+                    if (!mapInitialized) { initMap(); mapInitialized = true; }
+                    markerLayer.removeAll(); routeLayer.removeAll();
+                    points.forEach((p, i) => {
+                        markerLayer.addMarker(new SMap.Marker(p.coords, null, { title: `${i+1}` }));
+                    });
+                    routeLayer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, results.geometry));
+                    const z = m.computeCenterZoom(coords);
+                    m.setCenterZoom(z[0], z[1]);
+                }
+            });
+        }
+
+        function optimizePointsOrder() {
+            if(points.length < 3) return alert("Треба мінімум 3 точки");
+            let sorted = [points[0]], remaining = points.slice(1);
+            while(remaining.length > 0) {
+                let cur = sorted[sorted.length-1], nearest = -1, min = Infinity;
+                remaining.forEach((p, i) => {
+                    let d = cur.coords.distance(p.coords);
+                    if(d < min) { min = d; nearest = i; }
+                });
+                sorted.push(remaining[nearest]);
+                remaining.splice(nearest, 1);
+            }
+            points = sorted;
+            renderList();
+            calculateRoute(true);
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        function updateStatsUI(meters, seconds) {
+            const statsDiv = document.getElementById("header-stats");
+            if (!meters || !seconds) { statsDiv.style.display = "none"; return; }
+            statsDiv.style.display = "flex";
+
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const km = (meters / 1000).toFixed(1);
+
+            let timeStr = "";
+            if (h > 0) timeStr += `${h} год `;
+            timeStr += `${m} хв`;
+            
+            document.getElementById("stat-time").innerText = timeStr;
+            document.getElementById("stat-dist").innerText = `${km} км`;
+        }
+
+        function addCurrentLocation() {
+            if (!navigator.geolocation) return alert("Немає доступу до GPS");
+            const btnIcon = document.getElementById("geo-icon");
+            const spinner = document.getElementById("geo-spinner");
+            btnIcon.style.display = "none"; spinner.style.display = "block";
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const coords = SMap.Coords.fromWGS84(position.coords.longitude, position.coords.latitude);
+                    new SMap.Geocoder.Reverse(coords, (geocoder) => {
+                        const results = geocoder.getResults();
+                        let label = results.label || "Моя локація";
+                        points.push({ coords: coords, label: "📍 " + label });
+                        renderList();
+                        document.getElementById("header-stats").style.display = "none"; 
+                        btnIcon.style.display = "inline"; spinner.style.display = "none";
+                    });
+                },
+                (err) => { 
+                    alert("GPS помилка"); 
+                    btnIcon.style.display = "inline"; spinner.style.display = "none"; 
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        function startNavigationApp() {
+            if (points.length < 2) return alert("Додайте точки!");
+            const s = points[0].coords, e = points[points.length-1].coords;
+            let url = `https://mapy.cz/trasa?start=${s.x},${s.y}&end=${e.x},${e.y}`;
+            if(points.length>2) url += `&waypoints=${points.slice(1,-1).map(p=>`${p.coords.x},${p.coords.y}`).join(';')}`;
+            url += "&routeType=car_fast";
+            window.location.href = url.replace("https://", "mapycz://");
+            setTimeout(() => { if(confirm("Відкрити в браузері?")) window.open(url, '_blank'); }, 2500);
+        }
+
+        Loader.load(null, { POI: true, suggest: true }, init);
+    </script>
+</body>
+</html>
