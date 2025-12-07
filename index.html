@@ -305,7 +305,7 @@
             if (!navigator.geolocation) return alert("Немає доступу до GPS");
             const btnIcon = document.getElementById("geo-icon");
             const spinner = document.getElementById("geo-spinner");
-            btnIcon.style.display = "none"; spinner.style.display = "block";
+            btnIcon.style.display = "none"; spinner.display = "block";
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -327,24 +327,46 @@
             );
         }
 
-        // --- ПЛАН K: ТІЛЬКИ GPX ФАЙЛ, БЕЗ АВТОМАТИЧНОГО ВІДКРИТТЯ ---
-        function generateGPX(points) {
+        // --- GPX З АВТОМОБІЛЬНИМ МАРШРУТОМ ---
+        function generateGPX(points, routeGeometry) {
             let gpx = '<?xml version="1.0" encoding="UTF-8"?>\n';
-            gpx += '<gpx version="1.1" creator="Povnuj MapCZ" xmlns="http://www.topografix.com/GPX/1/1">\n';
+            gpx += '<gpx version="1.1" creator="Povnuj MapCZ" xmlns="http://www.topografix.com/GPX/1/1" ';
+            gpx += 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ';
+            gpx += 'xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n';
             gpx += '  <metadata>\n';
-            gpx += '    <name>Мій маршрут</name>\n';
+            gpx += '    <name>Автомобільний маршрут</name>\n';
+            gpx += '    <desc>Маршрут для авто через Mapy.cz</desc>\n';
             gpx += '  </metadata>\n';
-            gpx += '  <rte>\n';
-            gpx += '    <name>Маршрут</name>\n';
             
+            // ТРЕК (автомобільний маршрут з геометрією)
+            gpx += '  <trk>\n';
+            gpx += '    <name>Автомаршрут</name>\n';
+            gpx += '    <type>driving</type>\n';
+            gpx += '    <trkseg>\n';
+            
+            // Додаємо геометрію маршруту (якщо є)
+            if (routeGeometry && routeGeometry.length > 0) {
+                routeGeometry.forEach(coord => {
+                    gpx += `      <trkpt lat="${coord.y}" lon="${coord.x}"></trkpt>\n`;
+                });
+            } else {
+                // Якщо геометрії немає, додаємо тільки waypoints
+                points.forEach(p => {
+                    gpx += `      <trkpt lat="${p.coords.y}" lon="${p.coords.x}"></trkpt>\n`;
+                });
+            }
+            
+            gpx += '    </trkseg>\n';
+            gpx += '  </trk>\n';
+            
+            // WAYPOINTS (точки маршруту)
             points.forEach((p, i) => {
-                gpx += `    <rtept lat="${p.coords.y}" lon="${p.coords.x}">\n`;
-                gpx += `      <name>Точка ${i + 1}</name>\n`;
-                gpx += `      <desc>${p.label}</desc>\n`;
-                gpx += `    </rtept>\n`;
+                gpx += `  <wpt lat="${p.coords.y}" lon="${p.coords.x}">\n`;
+                gpx += `    <name>${i + 1}. ${p.label}</name>\n`;
+                gpx += `    <sym>Flag, Blue</sym>\n`;
+                gpx += `  </wpt>\n`;
             });
             
-            gpx += '  </rte>\n';
             gpx += '</gpx>';
             
             return gpx;
@@ -355,35 +377,36 @@
 
             const coords = points.map(p => p.coords);
             
-            SMap.Route.route(coords, { geometry: true, criterion: 'short' }).then(route => {
+            SMap.Route.route(coords, { geometry: true, criterion: 'fast' }).then(route => {
                 const results = route.getResults();
+                const routeGeometry = results.geometry;
                 
-                // Генеруємо GPX файл
-                const gpxContent = generateGPX(points);
+                // Генеруємо GPX файл з автомобільним маршрутом
+                const gpxContent = generateGPX(points, routeGeometry);
                 
                 // Створюємо Blob і завантажуємо файл
                 const blob = new Blob([gpxContent], { type: 'application/gpx+xml' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'marshrut.gpx';
+                a.download = 'auto_marshrut.gpx';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 
                 // Логуємо у консоль
-                console.log('=== GPX ФАЙЛ ЗГЕНЕРОВАНО ===');
+                console.log('=== GPX АВТОМОБІЛЬНИЙ МАРШРУТ ===');
                 console.log(gpxContent);
                 console.log('=== КІНЕЦЬ ===');
                 
-                // Інформуємо користувача (БЕЗ автоматичного відкриття)
+                // Інформуємо користувача
                 const distance = (results.length / 1000).toFixed(1);
                 const time = Math.round(results.time / 60);
                 
                 setTimeout(() => {
-                    if (confirm(`✅ GPX файл завантажено!\n\n📍 Дистанція: ${distance} км\n⏱️ Час: ${time} хв\n\n📋 ІНСТРУКЦІЯ:\n1. Відкрийте Mapy.cz в додатку або браузері\n2. Натисніть МЕНЮ (☰) зверху ліворуч\n3. Виберіть "Importovat data" або "Мої карти"\n4. Завантажте файл "marshrut.gpx"\n5. Маршрут з'явиться на карті\n6. Натисніть "Navigace"!\n\nВідкрити Mapy.cz зараз?`)) {
-                        window.open('https://mapy.cz', '_blank');
+                    if (confirm(`✅ Автомобільний GPX файл завантажено!\n\n🚗 Дистанція: ${distance} км\n⏱️ Час: ${time} хв\n\n📋 ІНСТРУКЦІЯ:\n1. Відкрийте додаток Mapy.cz\n2. Натисніть ☰ (Меню)\n3. "Plánovač tras" (Планування)\n4. "Importovat" → виберіть "auto_marshrut.gpx"\n5. Маршрут з'явиться як АВТОМОБІЛЬНИЙ\n6. Натисніть "Navigovat"!\n\nВідкрити Mapy.cz?`)) {
+                        window.open('https://mapy.cz/planovani-trasy', '_blank');
                     }
                 }, 500);
             });
