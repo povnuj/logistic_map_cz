@@ -329,39 +329,47 @@
             );
         }
 
-        // --- ПЛАН В: З ПАРАМЕТРОМ DESTINATION ---
+        // --- ПЛАН Е: REST API + МАРШРУТ ЧЕРЕЗ ПОСИЛАННЯ ---
         function startNavigationApp() {
             if (points.length < 2) return alert("Додайте мінімум 2 точки!");
 
-            const start = points[0].coords;
-            const end = points[points.length - 1].coords;
+            // Розраховуємо маршрут
+            const coords = points.map(p => p.coords);
             
-            // Формуємо URL з параметром destination
-            let url = `https://mapy.cz/zakladni`;
-            url += `?x=${start.x}&y=${start.y}&z=11`;
-            url += `&destination=${end.x},${end.y}`;
-            
-            // Додаємо проміжні точки як waypoints
-            if (points.length > 2) {
-                const waypoints = points.slice(1, -1)
-                                      .map(p => `${p.coords.x},${p.coords.y}`)
-                                      .join(';');
-                url += `&waypoints=${waypoints}`;
-            }
-            
-            // Режим планування маршруту
-            url += `&planovani-trasy`;
-            
-            // Тип маршруту
-            url += `&routeType=car_fast`;
-            
-            // Відкриваємо через посилання
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = "_blank";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            SMap.Route.route(coords, { geometry: true, criterion: 'short' }).then(route => {
+                const results = route.getResults();
+                
+                const start = points[0].coords;
+                const end = points[points.length - 1].coords;
+                
+                // ПЛАН Е: Передаємо маршрут як GPX через вбудовування у карту
+                // Spiskj всі точки як "source=coor" + явно вказуємо маршрут через параметри
+                
+                let url = "https://mapy.cz/zakladni?";
+                
+                // Центруємо на стартовій точці
+                url += `x=${start.x}&y=${start.y}&z=11`;
+                
+                // Додаємо усі точки як власні точки на карті
+                points.forEach(p => {
+                    url += `&source=coor&id=${p.coords.x},${p.coords.y}`;
+                });
+                
+                // Намагаємось передати маршрут через параметр route (якщо підтримується)
+                // або звичайне посилання, яке користувач активує вручну
+                url += "&planovani-trasy";
+                
+                // Відкриваємо в новій вкладці
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = "_blank";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Інформуємо користувача
+                alert(`Карта відкрилася з ${points.length} точками.\n\nЯкщо маршрут не побудовано автоматично:\n1. Натисніть іконку "Планування маршруту"\n2. Виберіть тип маршруту\n3. Натисніть "Навігація"`);
+            });
         }
 
         Loader.load(null, { POI: true, suggest: true }, init);
