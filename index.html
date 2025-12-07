@@ -329,35 +329,39 @@
             );
         }
 
-        // --- ПЛАН Б: ВЛАСНІ ТОЧКИ НА КАРТІ ---
+        // --- ПЛАН В: З ПАРАМЕТРОМ DESTINATION ---
         function startNavigationApp() {
             if (points.length < 2) return alert("Додайте мінімум 2 точки!");
 
-            // Формуємо URL з "Власними точками" (source=coor)
-            // Це гарантовано відкриває карту з усіма точками, і користувач натискає "Маршрут" в додатку
+            const start = points[0].coords;
+            const end = points[points.length - 1].coords;
             
-            let url = "https://mapy.cz/zakladni?planovani-trasy";
+            // Формуємо URL з параметром destination
+            let url = `https://mapy.cz/zakladni`;
+            url += `?x=${start.x}&y=${start.y}&z=11`;
+            url += `&destination=${end.x},${end.y}`;
             
-            // Додаємо кожну точку як джерело координат
-            points.forEach(p => {
-                url += `&source=coor&id=${p.coords.x},${p.coords.y}`;
-            });
-
-            // Центруємо карту на першій точці
-            url += `&x=${points[0].coords.x}&y=${points[0].coords.y}&z=11`;
+            // Додаємо проміжні точки як waypoints
+            if (points.length > 2) {
+                const waypoints = points.slice(1, -1)
+                                      .map(p => `${p.coords.x},${p.coords.y}`)
+                                      .join(';');
+                url += `&waypoints=${waypoints}`;
+            }
             
-            // Спроба відкрити через звичайне посилання (Android App Links / iOS Universal Links перехоплять)
+            // Режим планування маршруту
+            url += `&planovani-trasy`;
+            
+            // Тип маршруту
+            url += `&routeType=car_fast`;
+            
+            // Відкриваємо через посилання
             const link = document.createElement('a');
             link.href = url;
             link.target = "_blank";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
-            // Повідомлення користувачеві
-            setTimeout(() => {
-                 alert("Карта відкрилася з вашими точками.\n\nВ додатку Mapy.cz натисніть кнопку 'Навігація' або 'Маршрут', щоб побудувати маршрут.");
-            }, 1000);
         }
 
         Loader.load(null, { POI: true, suggest: true }, init);
