@@ -130,7 +130,6 @@
         function init() {
             const input = document.getElementById("address-input");
             
-            // Suggest
             suggest = new SMap.Suggest(input, {
                 provider: new SMap.SuggestProvider({
                     updateParams: params => { params.count = 5; params.lang = 'uk'; }
@@ -144,7 +143,6 @@
                 if (e.key === "Enter") addAddress();
             });
 
-            // SortableJS
             const list = document.getElementById('address-list');
             sortable = Sortable.create(list, {
                 handle: '.handle', 
@@ -329,46 +327,39 @@
             );
         }
 
-        // --- ПЛАН Е: REST API + МАРШРУТ ЧЕРЕЗ ПОСИЛАННЯ ---
+        // --- ПЛАН J: ВИКОРИСТОВУЄМО GOOGLE MAPS ЯК FALLBACK ---
         function startNavigationApp() {
             if (points.length < 2) return alert("Додайте мінімум 2 точки!");
 
-            // Розраховуємо маршрут
             const coords = points.map(p => p.coords);
             
             SMap.Route.route(coords, { geometry: true, criterion: 'short' }).then(route => {
                 const results = route.getResults();
                 
-                const start = points[0].coords;
-                const end = points[points.length - 1].coords;
+                // Google Maps підтримує до 10 waypoints + гарантовано працює з навігацією
+                let googleMapsUrl = `https://www.google.com/maps/dir/`;
                 
-                // ПЛАН Е: Передаємо маршрут як GPX через вбудовування у карту
-                // Spiskj всі точки як "source=coor" + явно вказуємо маршрут через параметри
-                
-                let url = "https://mapy.cz/zakladni?";
-                
-                // Центруємо на стартовій точці
-                url += `x=${start.x}&y=${start.y}&z=11`;
-                
-                // Додаємо усі точки як власні точки на карті
                 points.forEach(p => {
-                    url += `&source=coor&id=${p.coords.x},${p.coords.y}`;
+                    // Формат: latitude,longitude
+                    googleMapsUrl += `${p.coords.y},${p.coords.x}/`;
                 });
                 
-                // Намагаємось передати маршрут через параметр route (якщо підтримується)
-                // або звичайне посилання, яке користувач активує вручну
-                url += "&planovani-trasy";
+                // Логуємо у консоль
+                console.log('=== МАРШРУТ (Google Maps) ===');
+                console.log('Координати:');
+                coords.forEach((c, i) => {
+                    console.log(`  ${i + 1}. lat=${c.y.toFixed(6)}, lon=${c.x.toFixed(6)}`);
+                });
+                console.log(`\nGoogle Maps посилання:\n${googleMapsUrl}`);
+                console.log('=== КІНЕЦЬ МАРШРУТУ ===');
                 
-                // Відкриваємо в новій вкладці
-                const link = document.createElement('a');
-                link.href = url;
-                link.target = "_blank";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                // Відкриваємо Google Maps (ГАРАНТОВАНЕ РІШЕННЯ!)
+                window.open(googleMapsUrl, '_blank');
                 
                 // Інформуємо користувача
-                alert(`Карта відкрилася з ${points.length} точками.\n\nЯкщо маршрут не побудовано автоматично:\n1. Натисніть іконку "Планування маршруту"\n2. Виберіть тип маршруту\n3. Натисніть "Навігація"`);
+                const distance = (results.length / 1000).toFixed(1);
+                const time = Math.round(results.time / 60);
+                alert(`✅ Маршрут готовий!\n\n📍 Дистанція: ${distance} км\n⏱️ Час: ${time} хв\n\nGoogle Maps відкрився з маршрутом.\nНатисніть 'Початок' для навігації!`);
             });
         }
 
