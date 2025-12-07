@@ -3,11 +3,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Povnuj MapCZ</title>
+    <title>Logist Pro Plan A</title>
     
     <!-- Mapy.cz API -->
     <script type="text/javascript" src="https://api.mapy.cz/loader.js"></script>
     
+    <!-- SortableJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     
     <style>
@@ -16,7 +17,7 @@
         #map-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: none; background: #eee; }
         #close-map-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #34495e; color: white; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 30; display: none; font-weight: 600; cursor: pointer; align-items: center; gap: 8px; }
 
-        #main-view { display: flex; flex-direction: column; height: 100vh; padding: 20px; padding-bottom: 100px; box-sizing: border-box; background: #fff; z-index: 10; }
+        #main-view { display: flex; flex-direction: column; height: 100vh; padding: 20px; padding-bottom: 20px; box-sizing: border-box; background: #fff; z-index: 10; }
 
         /* HEADER */
         .header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; height: 50px; }
@@ -64,9 +65,9 @@
         .handle {
             color: #bbb;
             cursor: grab;
-            /* padding: 10px; */
             font-size: 20px;
-            margin-right: 5px;
+            margin-right: 10px;
+            padding: 5px;
             touch-action: none;
         }
 
@@ -129,7 +130,7 @@
         function init() {
             const input = document.getElementById("address-input");
             
-            // 1. Suggest
+            // Suggest
             suggest = new SMap.Suggest(input, {
                 provider: new SMap.SuggestProvider({
                     updateParams: params => { params.count = 5; params.lang = 'uk'; }
@@ -143,7 +144,7 @@
                 if (e.key === "Enter") addAddress();
             });
 
-            // 2. SortableJS (Drag & Drop)
+            // SortableJS
             const list = document.getElementById('address-list');
             sortable = Sortable.create(list, {
                 handle: '.handle', 
@@ -151,11 +152,8 @@
                 ghostClass: 'sortable-ghost',
                 dragClass: 'sortable-drag',
                 onEnd: function (evt) {
-                    // evt.oldIndex -> evt.newIndex
                     const item = points.splice(evt.oldIndex, 1)[0];
                     points.splice(evt.newIndex, 0, item);
-                    
-                    // recalculate indexes
                     renderList(); 
                     calculateRoute(true); 
                 }
@@ -331,14 +329,34 @@
             );
         }
 
+        // --- ПЛАН А: СТАНДАРТНЕ ПОСИЛАННЯ MAPY.CZ ---
         function startNavigationApp() {
-            if (points.length < 2) return alert("Додайте точки!");
-            const s = points[0].coords, e = points[points.length-1].coords;
-            let url = `https://mapy.cz/trasa?start=${s.x},${s.y}&end=${e.x},${e.y}`;
-            if(points.length>2) url += `&waypoints=${points.slice(1,-1).map(p=>`${p.coords.x},${p.coords.y}`).join(';')}`;
+            if (points.length < 2) return alert("Додайте мінімум 2 точки!");
+            
+            const start = points[0].coords;
+            const end = points[points.length - 1].coords;
+            
+            // Базовий URL: start та end
+            let url = `https://mapy.cz/trasa?start=${start.x},${start.y}&end=${end.x},${end.y}`;
+            
+            // Waypoints: через крапку з комою
+            if (points.length > 2) {
+                const waypoints = points.slice(1, -1)
+                                      .map(p => `${p.coords.x},${p.coords.y}`)
+                                      .join(';');
+                url += `&waypoints=${waypoints}`;
+            }
+            
+            // Параметри маршруту
             url += "&routeType=car_fast";
-            window.location.href = url.replace("https://", "mapycz://");
-            setTimeout(() => { if(confirm("Відкрити в браузері?")) window.open(url, '_blank'); }, 2500);
+
+            // Емуляція кліку по посиланню (краще для Deep Linking)
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = "_blank"; // Відкрити в новому вікні/додатку
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         Loader.load(null, { POI: true, suggest: true }, init);
