@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Logist Pro Plan A</title>
+    <title>Povnuj MapCZ</title>
     
     <!-- Mapy.cz API -->
     <script type="text/javascript" src="https://api.mapy.cz/loader.js"></script>
@@ -329,34 +329,35 @@
             );
         }
 
-        // --- ПЛАН А: СТАНДАРТНЕ ПОСИЛАННЯ MAPY.CZ ---
+        // --- ПЛАН Б: ВЛАСНІ ТОЧКИ НА КАРТІ ---
         function startNavigationApp() {
             if (points.length < 2) return alert("Додайте мінімум 2 точки!");
-            
-            const start = points[0].coords;
-            const end = points[points.length - 1].coords;
-            
-            // Базовий URL: start та end
-            let url = `https://mapy.cz/trasa?start=${start.x},${start.y}&end=${end.x},${end.y}`;
-            
-            // Waypoints: через крапку з комою
-            if (points.length > 2) {
-                const waypoints = points.slice(1, -1)
-                                      .map(p => `${p.coords.x},${p.coords.y}`)
-                                      .join(';');
-                url += `&waypoints=${waypoints}`;
-            }
-            
-            // Параметри маршруту
-            url += "&routeType=car_fast";
 
-            // Емуляція кліку по посиланню (краще для Deep Linking)
+            // Формуємо URL з "Власними точками" (source=coor)
+            // Це гарантовано відкриває карту з усіма точками, і користувач натискає "Маршрут" в додатку
+            
+            let url = "https://mapy.cz/zakladni?planovani-trasy";
+            
+            // Додаємо кожну точку як джерело координат
+            points.forEach(p => {
+                url += `&source=coor&id=${p.coords.x},${p.coords.y}`;
+            });
+
+            // Центруємо карту на першій точці
+            url += `&x=${points[0].coords.x}&y=${points[0].coords.y}&z=11`;
+            
+            // Спроба відкрити через звичайне посилання (Android App Links / iOS Universal Links перехоплять)
             const link = document.createElement('a');
             link.href = url;
-            link.target = "_blank"; // Відкрити в новому вікні/додатку
+            link.target = "_blank";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            
+            // Повідомлення користувачеві
+            setTimeout(() => {
+                 alert("Карта відкрилася з вашими точками.\n\nВ додатку Mapy.cz натисніть кнопку 'Навігація' або 'Маршрут', щоб побудувати маршрут.");
+            }, 1000);
         }
 
         Loader.load(null, { POI: true, suggest: true }, init);
