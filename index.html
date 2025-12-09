@@ -17,7 +17,7 @@
         #map-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: none; background: #eee; }
         #close-map-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #34495e; color: white; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 30; display: none; font-weight: 600; cursor: pointer; align-items: center; gap: 8px; }
 
-        #main-view { display: flex; flex-direction: column; height: 100vh; padding: 20px; padding-bottom: 20px; box-sizing: border-box; background: #fff; z-index: 10; }
+        #main-view { display: flex; flex-direction: column; height: 100vh; padding: 20px; padding-bottom: 70px; box-sizing: border-box; background: #fff; z-index: 10; }
 
         /* HEADER */
         .header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; height: 50px; }
@@ -40,11 +40,13 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         button { border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; margin-bottom: 10px; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: auto; margin-bottom: 10px; }
         #add-btn { background: #e8f5e9; color: #27ae60; margin-bottom: 20px; }
         #add-btn:active { background: #c8e6c9; }
         #sort-btn { background: #fef9e7; color: #f39c12; margin: 0; }
         #map-btn { background: #eaf2f8; color: #3498db; margin: 0; }
+        #clear-btn { background: #ffebee; color: #e74c3c; margin: 0; }
+        #clear-btn:active { background: #ffcdd2; }
         #nav-btn { background: #e74c3c; color: white; margin-top: 10px; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); margin-bottom: 0; }
         #nav-btn:active { transform: scale(0.98); }
 
@@ -56,7 +58,8 @@
             align-items: center; 
             font-size: 16px; 
             background: #fff;
-            touch-action: none; 
+            touch-action: none;
+            min-height: 52px;
         }
         
         .sortable-ghost { opacity: 0.4; background: #e3f2fd; }
@@ -69,11 +72,39 @@
             margin-right: 10px;
             padding: 5px;
             touch-action: none;
+            align-self: flex-start;
         }
 
-        .badge { background: #f0f0f0; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; margin-right: 12px; color: #555; flex-shrink: 0; }
-        .text { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .del { color: #e74c3c; padding: 10px; font-size: 22px; cursor: pointer; }
+        .badge { background: #f0f0f0; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; margin-right: 12px; color: #555; flex-shrink: 0; align-self: flex-start; }
+        
+        .text { 
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+            line-height: 1.3;
+        }
+        
+        .city-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .address-detail {
+            font-size: 12px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+        
+        .del { color: #e74c3c; padding: 10px; font-size: 22px; cursor: pointer; align-self: flex-start; }
         
         .empty-state { text-align: center; color: #999; margin-top: 50px; font-size: 15px; display: block; }
         .smap-suggest { z-index: 9999 !important; font-size: 16px !important; }
@@ -109,10 +140,11 @@
         <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
 
         <ul id="address-list"></ul>
-        <div class="empty-state" id="empty-msg">Додайте адреси або натисніть 📍</div>
+        <!-- <div class="empty-state" id="empty-msg">Додайте адреси або натисніть 📍</div> -->
 
         <div class="action-grid">
             <button id="sort-btn" onclick="optimizePointsOrder()">🔃 Сортувати</button>
+            <button id="clear-btn" onclick="clearAllPoints()">🗑️ Очистити</button>
             <button id="map-btn" onclick="openMap()">🗺 На карту</button>
         </div>
 
@@ -127,6 +159,87 @@
         let lastSuggestedCoords = null;
         let sortable; 
 
+        const STORAGE_KEY = 'mapczRoutePoints';
+
+        function parseAddress(fullAddress) {
+            if (!fullAddress || fullAddress.trim() === '') {
+                return {
+                    city: 'Невідома адреса',
+                    address: ''
+                };
+            }
+            
+            const parts = fullAddress.split(',').map(s => s.trim());
+            
+            if (parts.length >= 2) {
+                let city = parts[1];
+                let address = parts[0];
+                
+                if (parts.length >= 3 && /^\d{3}\s?\d{2}$/.test(parts[2])) {
+                    address += ', ' + parts[2];
+                }
+                
+                return {
+                    city: city,
+                    address: address
+                };
+            } else {
+                return {
+                    city: fullAddress,
+                    address: ''
+                };
+            }
+        }
+
+        function savePointsToStorage() {
+            try {
+                const simplePoints = points.map(p => ({
+                    x: p.coords.x,
+                    y: p.coords.y,
+                    label: p.label
+                }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(simplePoints));
+                console.log('✅ Точки збережено в localStorage');
+            } catch (e) {
+                console.error('❌ Помилка збереження:', e);
+            }
+        }
+
+        function loadPointsFromStorage() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    const simplePoints = JSON.parse(stored);
+                    points = simplePoints.map(p => ({
+                        coords: SMap.Coords.fromWGS84(p.x, p.y),
+                        label: p.label
+                    }));
+                    console.log(`✅ Завантажено ${points.length} точок з localStorage`);
+                    renderList();
+                }
+            } catch (e) {
+                console.error('❌ Помилка завантаження:', e);
+                points = [];
+            }
+        }
+
+        function clearAllPoints() {
+            if (points.length === 0) {
+                alert('Список вже порожній!');
+                return;
+            }
+            
+            if (confirm(`Видалити всі ${points.length} точок?\nЦя дія незворотна!`)) {
+                points = [];
+                localStorage.removeItem(STORAGE_KEY);
+                renderList();
+                document.getElementById("header-stats").style.display = "none";
+                console.log('🗑️ Всі точки видалено');
+                
+                if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
+            }
+        }
+
         function init() {
             const input = document.getElementById("address-input");
             
@@ -135,10 +248,23 @@
                     updateParams: params => { params.count = 5; params.lang = 'uk'; }
                 })
             });
+            
             suggest.addListener("suggest", (suggestData) => {
                 const data = suggestData.data;
                 lastSuggestedCoords = SMap.Coords.fromWGS84(data.longitude, data.latitude);
+                
+                setTimeout(() => {
+                    new SMap.Geocoder.Reverse(lastSuggestedCoords, (geocoder) => {
+                        const results = geocoder.getResults();
+                        
+                        if (results && results.label) {
+                            input.value = results.label;
+                            console.log('✅ Оновлено інпут:', results.label);
+                        }
+                    });
+                }, 100);
             });
+
             input.addEventListener("keypress", function(e) {
                 if (e.key === "Enter") addAddress();
             });
@@ -153,9 +279,12 @@
                     const item = points.splice(evt.oldIndex, 1)[0];
                     points.splice(evt.newIndex, 0, item);
                     renderList(); 
+                    savePointsToStorage();
                     calculateRoute(true); 
                 }
             });
+
+            loadPointsFromStorage();
         }
 
         async function addAddress() {
@@ -169,17 +298,17 @@
             if (lastSuggestedCoords) {
                 coords = lastSuggestedCoords;
                 lastSuggestedCoords = null;
-            }
-
-            if (!coords) {
+            } else {
                 const res = await geocode(val);
                 if (!res) return;
                 coords = res.coords;
                 label = res.label;
             }
 
+            console.log('✅ Додаємо точку:', label);
             points.push({ coords, label });
             renderList();
+            savePointsToStorage();
             input.value = "";
             document.getElementById("header-stats").style.display = "none";
         }
@@ -187,9 +316,19 @@
         function geocode(addr) {
             return new Promise(resolve => {
                 new SMap.Geocoder(addr, g => {
-                    const res = g.getResults()[0]?.results;
-                    if(res?.length) resolve({ coords: res[0].coords, label: res[0].label });
-                    else { alert("Не знайдено цю адресу"); resolve(null); }
+                    const results = g.getResults()[0];
+                    if (results && results.results && results.results.length > 0) {
+                        const result = results.results[0];
+                        let label = result.label || addr;
+                        
+                        resolve({ 
+                            coords: result.coords, 
+                            label: label
+                        });
+                    } else { 
+                        alert("Не знайдено цю адресу"); 
+                        resolve(null); 
+                    }
                 });
             });
         }
@@ -204,11 +343,20 @@
             } else {
                 empty.style.display = "none";
                 points.forEach((p, i) => {
+                    const parsed = parseAddress(p.label);
                     const li = document.createElement("li");
+                    
+                    let addressHTML = `<div class="city-name">${parsed.city}</div>`;
+                    if (parsed.address) {
+                        addressHTML += `<div class="address-detail">${parsed.address}</div>`;
+                    }
+                    
                     li.innerHTML = `
                         <div class="handle">☰</div>
                         <div class="badge">${i+1}</div>
-                        <div class="text">${p.label}</div>
+                        <div class="text">
+                            ${addressHTML}
+                        </div>
                         <div class="del" onclick="removePoint(${i})">✕</div>
                     `;
                     list.appendChild(li);
@@ -220,6 +368,7 @@
         function removePoint(i) {
             points.splice(i, 1);
             renderList();
+            savePointsToStorage();
             document.getElementById("header-stats").style.display = "none";
         }
 
@@ -280,6 +429,7 @@
             }
             points = sorted;
             renderList();
+            savePointsToStorage();
             calculateRoute(true);
             if (navigator.vibrate) navigator.vibrate(50);
         }
@@ -305,16 +455,18 @@
             if (!navigator.geolocation) return alert("Немає доступу до GPS");
             const btnIcon = document.getElementById("geo-icon");
             const spinner = document.getElementById("geo-spinner");
-            btnIcon.style.display = "none"; spinner.display = "block";
+            btnIcon.style.display = "none"; spinner.style.display = "block";
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const coords = SMap.Coords.fromWGS84(position.coords.longitude, position.coords.latitude);
                     new SMap.Geocoder.Reverse(coords, (geocoder) => {
                         const results = geocoder.getResults();
-                        let label = results.label || "Моя локація";
+                        let label = results.label || `${coords.y.toFixed(5)}, ${coords.x.toFixed(5)}`;
+                        
                         points.push({ coords: coords, label: "📍 " + label });
                         renderList();
+                        savePointsToStorage();
                         document.getElementById("header-stats").style.display = "none"; 
                         btnIcon.style.display = "inline"; spinner.style.display = "none";
                     });
@@ -327,51 +479,6 @@
             );
         }
 
-        // --- GPX З АВТОМОБІЛЬНИМ МАРШРУТОМ ---
-        function generateGPX(points, routeGeometry) {
-            let gpx = '<?xml version="1.0" encoding="UTF-8"?>\n';
-            gpx += '<gpx version="1.1" creator="Povnuj MapCZ" xmlns="http://www.topografix.com/GPX/1/1" ';
-            gpx += 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ';
-            gpx += 'xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n';
-            gpx += '  <metadata>\n';
-            gpx += '    <name>Автомобільний маршрут</name>\n';
-            gpx += '    <desc>Маршрут для авто через Mapy.cz</desc>\n';
-            gpx += '  </metadata>\n';
-            
-            // ТРЕК (автомобільний маршрут з геометрією)
-            gpx += '  <trk>\n';
-            gpx += '    <name>Автомаршрут</name>\n';
-            gpx += '    <type>driving</type>\n';
-            gpx += '    <trkseg>\n';
-            
-            // Додаємо геометрію маршруту (якщо є)
-            if (routeGeometry && routeGeometry.length > 0) {
-                routeGeometry.forEach(coord => {
-                    gpx += `      <trkpt lat="${coord.y}" lon="${coord.x}"></trkpt>\n`;
-                });
-            } else {
-                // Якщо геометрії немає, додаємо тільки waypoints
-                points.forEach(p => {
-                    gpx += `      <trkpt lat="${p.coords.y}" lon="${p.coords.x}"></trkpt>\n`;
-                });
-            }
-            
-            gpx += '    </trkseg>\n';
-            gpx += '  </trk>\n';
-            
-            // WAYPOINTS (точки маршруту)
-            points.forEach((p, i) => {
-                gpx += `  <wpt lat="${p.coords.y}" lon="${p.coords.x}">\n`;
-                gpx += `    <name>${i + 1}. ${p.label}</name>\n`;
-                gpx += `    <sym>Flag, Blue</sym>\n`;
-                gpx += `  </wpt>\n`;
-            });
-            
-            gpx += '</gpx>';
-            
-            return gpx;
-        }
-
         function startNavigationApp() {
             if (points.length < 2) return alert("Додайте мінімум 2 точки!");
 
@@ -379,36 +486,39 @@
             
             SMap.Route.route(coords, { geometry: true, criterion: 'fast' }).then(route => {
                 const results = route.getResults();
-                const routeGeometry = results.geometry;
                 
-                // Генеруємо GPX файл з автомобільним маршрутом
-                const gpxContent = generateGPX(points, routeGeometry);
+                const start = points[0].coords;
+                const end = points[points.length - 1].coords;
                 
-                // Створюємо Blob і завантажуємо файл
-                const blob = new Blob([gpxContent], { type: 'application/gpx+xml' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'auto_marshrut.gpx';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                // ФОРМАТ З КООРДИНАТАМИ
+                let url = `https://mapy.com/fnc/v1/route`;
+                url += `?start=${start.x},${start.y}`;
+                url += `&end=${end.x},${end.y}`;
                 
-                // Логуємо у консоль
-                console.log('=== GPX АВТОМОБІЛЬНИЙ МАРШРУТ ===');
-                console.log(gpxContent);
+                if (points.length > 2) {
+                    const waypoints = points.slice(1, -1)
+                                          .map(p => `${p.coords.x},${p.coords.y}`)
+                                          .join(';');
+                    url += `&waypoints=${waypoints}`;
+                }
+                
+                url += `&routeType=car_fast_traffic`;
+                
+                console.log('=== MAPY.CZ З КООРДИНАТАМИ ===');
+                console.log('Точки маршруту:');
+                points.forEach((p, i) => {
+                    console.log(`  ${i + 1}. "${p.label}"`);
+                    console.log(`     lon=${p.coords.x.toFixed(6)}, lat=${p.coords.y.toFixed(6)}`);
+                });
+                console.log(`\nURL: ${url}`);
                 console.log('=== КІНЕЦЬ ===');
                 
-                // Інформуємо користувача
+                window.open(url, '_blank');
+                
                 const distance = (results.length / 1000).toFixed(1);
                 const time = Math.round(results.time / 60);
                 
-                setTimeout(() => {
-                    if (confirm(`✅ Автомобільний GPX файл завантажено!\n\n🚗 Дистанція: ${distance} км\n⏱️ Час: ${time} хв\n\n📋 ІНСТРУКЦІЯ:\n1. Відкрийте додаток Mapy.cz\n2. Натисніть ☰ (Меню)\n3. "Plánovač tras" (Планування)\n4. "Importovat" → виберіть "auto_marshrut.gpx"\n5. Маршрут з'явиться як АВТОМОБІЛЬНИЙ\n6. Натисніть "Navigovat"!\n\nВідкрити Mapy.cz?`)) {
-                        window.open('https://mapy.cz/planovani-trasy', '_blank');
-                    }
-                }, 500);
+                alert(`✅ Маршрут готовий!\n\n🚗 Дистанція: ${distance} км\n⏱️ Час: ${time} хв\n📍 Точок: ${points.length}\n\nMapy.cz відкрився з маршрутом!`);
             });
         }
 
