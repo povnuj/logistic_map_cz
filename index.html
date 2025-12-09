@@ -106,7 +106,7 @@
         
         .del { color: #e74c3c; padding: 10px; font-size: 22px; cursor: pointer; align-self: flex-start; }
         
-        .empty-state { text-align: center; color: #999; margin-top: 50px; font-size: 15px; display: block; }
+        .empty-state { text-align: center; color: #999; margin-top: 50px; font-size: 15px; display: none; }
         .smap-suggest { z-index: 9999 !important; font-size: 16px !important; }
     </style>
 </head>
@@ -140,7 +140,6 @@
         <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
 
         <ul id="address-list"></ul>
-        <!-- <div class="empty-state" id="empty-msg">Додайте адреси або натисніть 📍</div> -->
 
         <div class="action-grid">
             <button id="sort-btn" onclick="optimizePointsOrder()">🔃 Сортувати</button>
@@ -335,33 +334,28 @@
 
         function renderList() {
             const list = document.getElementById("address-list");
-            const empty = document.getElementById("empty-msg");
             list.innerHTML = ""; 
             
-            if (points.length === 0) {
-                empty.style.display = "block";
-            } else {
-                empty.style.display = "none";
-                points.forEach((p, i) => {
-                    const parsed = parseAddress(p.label);
-                    const li = document.createElement("li");
-                    
-                    let addressHTML = `<div class="city-name">${parsed.city}</div>`;
-                    if (parsed.address) {
-                        addressHTML += `<div class="address-detail">${parsed.address}</div>`;
-                    }
-                    
-                    li.innerHTML = `
-                        <div class="handle">☰</div>
-                        <div class="badge">${i+1}</div>
-                        <div class="text">
-                            ${addressHTML}
-                        </div>
-                        <div class="del" onclick="removePoint(${i})">✕</div>
-                    `;
-                    list.appendChild(li);
-                });
-            }
+            points.forEach((p, i) => {
+                const parsed = parseAddress(p.label);
+                const li = document.createElement("li");
+                
+                let addressHTML = `<div class="city-name">${parsed.city}</div>`;
+                if (parsed.address) {
+                    addressHTML += `<div class="address-detail">${parsed.address}</div>`;
+                }
+                
+                li.innerHTML = `
+                    <div class="handle">☰</div>
+                    <div class="badge">${i+1}</div>
+                    <div class="text">
+                        ${addressHTML}
+                    </div>
+                    <div class="del" onclick="removePoint(${i})">✕</div>
+                `;
+                list.appendChild(li);
+            });
+
             document.getElementById("count").innerText = points.length;
         }
 
