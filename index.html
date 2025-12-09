@@ -19,13 +19,13 @@
 
         #main-view { display: flex; flex-direction: column; height: 100vh; padding: 20px; padding-bottom: 70px; box-sizing: border-box; background: #fff; z-index: 10; }
 
-        /* HEADER */
         .header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; height: 50px; }
         .header-title-group { display: flex; align-items: center; gap: 10px; }
         h2 { margin: 0; font-size: 22px; color: #333; font-weight: 700; }
         .count-badge { background: #f0f0f0; padding: 4px 10px; border-radius: 12px; font-size: 14px; font-weight: bold; color: #555; }
         
         #header-stats { display: none; flex-direction: column; align-items: flex-end; justify-content: center; background: #e1f5fe; padding: 6px 12px; border-radius: 8px; }
+        #header-stats.loading { opacity: 0.5; }
         .stat-time { font-size: 15px; font-weight: 700; color: #0277bd; line-height: 1.2; }
         .stat-dist { font-size: 12px; font-weight: 500; color: #546e7a; }
 
@@ -108,12 +108,41 @@
         
         .empty-state { text-align: center; color: #999; margin-top: 50px; font-size: 15px; display: none; }
         .smap-suggest { z-index: 9999 !important; font-size: 16px !important; }
+
+        #chunks-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; }
+        #chunks-content { background: white; border-radius: 16px; padding: 20px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        #chunks-content h3 { margin: 0 0 15px 0; font-size: 20px; color: #333; }
+        .chunk-item { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .chunk-info { flex-grow: 1; }
+        .chunk-title { font-weight: 700; font-size: 16px; color: #333; margin-bottom: 5px; }
+        .chunk-details { font-size: 13px; color: #666; }
+        .chunk-btn { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; }
+        .chunk-btn:active { background: #229954; }
+        .chunk-btn.launched { background: #95a5a6; pointer-events: none; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .modal-btn { flex: 1; padding: 14px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; }
+        .modal-btn-primary { background: #e74c3c; color: white; }
+        .modal-btn-secondary { background: #ecf0f1; color: #333; }
+        
+        .loading-indicator { text-align: center; padding: 20px; color: #666; }
+        .loading-spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 10px auto; }
     </style>
 </head>
 <body>
 
     <div id="map-container"></div>
     <div id="close-map-btn" onclick="closeMap()"><span>✕</span> Закрити карту</div>
+
+    <div id="chunks-modal">
+        <div id="chunks-content">
+            <h3>🗺️ Розбиття маршруту</h3>
+            <div id="chunks-list"></div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" onclick="launchAllChunks()">🚀 Запустити всі</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeChunksModal()">Закрити</button>
+            </div>
+        </div>
+    </div>
 
     <div id="main-view">
         <div class="header">
@@ -157,6 +186,9 @@
         let mapInitialized = false;
         let lastSuggestedCoords = null;
         let sortable; 
+        let routeChunks = [];
+        let chunkStats = [];
+        let routeCalculationTimeout = null;
 
         const STORAGE_KEY = 'mapczRoutePoints';
 
@@ -215,6 +247,10 @@
                     }));
                     console.log(`✅ Завантажено ${points.length} точок з localStorage`);
                     renderList();
+                    // Автоматично рахуємо маршрут при завантаженні
+                    if (points.length >= 2) {
+                        calculateRouteStats();
+                    }
                 }
             } catch (e) {
                 console.error('❌ Помилка завантаження:', e);
@@ -279,7 +315,8 @@
                     points.splice(evt.newIndex, 0, item);
                     renderList(); 
                     savePointsToStorage();
-                    calculateRoute(true); 
+                    // ✅ Перераховуємо при зміні порядку
+                    calculateRouteStats();
                 }
             });
 
@@ -309,7 +346,13 @@
             renderList();
             savePointsToStorage();
             input.value = "";
-            document.getElementById("header-stats").style.display = "none";
+            
+            // ✅ Автоматично рахуємо при додаванні
+            if (points.length >= 2) {
+                calculateRouteStats();
+            } else {
+                document.getElementById("header-stats").style.display = "none";
+            }
         }
 
         function geocode(addr) {
@@ -363,7 +406,13 @@
             points.splice(i, 1);
             renderList();
             savePointsToStorage();
-            document.getElementById("header-stats").style.display = "none";
+            
+            // ✅ Перераховуємо при видаленні
+            if (points.length >= 2) {
+                calculateRouteStats();
+            } else {
+                document.getElementById("header-stats").style.display = "none";
+            }
         }
 
         function initMap() {
@@ -379,7 +428,7 @@
             if (points.length === 0) return alert("Спочатку додайте точки!");
             document.getElementById("map-container").style.display = "block";
             document.getElementById("close-map-btn").style.display = "flex";
-            if (!mapInitialized) { initMap(); mapInitialized = true; } else { m.sync(); }
+            if (!mapInitialized) { initMap(); mapInitialized = true; }
             calculateRoute();
         }
 
@@ -409,6 +458,46 @@
             });
         }
 
+        // ✅ НОВА ФУНКЦІЯ для автоматичного перерахунку
+        function calculateRouteStats() {
+            if (points.length < 2) {
+                document.getElementById("header-stats").style.display = "none";
+                return;
+            }
+
+            // Відміняємо попередній таймер якщо є
+            if (routeCalculationTimeout) {
+                clearTimeout(routeCalculationTimeout);
+            }
+
+            // Показуємо індикатор завантаження
+            const statsDiv = document.getElementById("header-stats");
+            statsDiv.style.display = "flex";
+            statsDiv.classList.add("loading");
+            document.getElementById("stat-time").innerText = "...";
+            document.getElementById("stat-dist").innerText = "...";
+
+            // Затримка щоб не робити занадто багато запитів
+            routeCalculationTimeout = setTimeout(() => {
+                const coords = points.map(p => p.coords);
+                
+                console.log('🔄 Розраховуємо маршрут...');
+                
+                SMap.Route.route(coords, { geometry: true, criterion: 'fast' })
+                    .then(route => {
+                        const results = route.getResults();
+                        console.log('✅ Маршрут розраховано:', results);
+                        updateStatsUI(results.length, results.time);
+                        statsDiv.classList.remove("loading");
+                    })
+                    .catch(err => {
+                        console.error('❌ Помилка розрахунку:', err);
+                        statsDiv.style.display = "none";
+                        statsDiv.classList.remove("loading");
+                    });
+            }, 500); // Затримка 500мс
+        }
+
         function optimizePointsOrder() {
             if(points.length < 3) return alert("Треба мінімум 3 точки");
             let sorted = [points[0]], remaining = points.slice(1);
@@ -424,13 +513,17 @@
             points = sorted;
             renderList();
             savePointsToStorage();
-            calculateRoute(true);
+            // ✅ Перераховуємо після оптимізації
+            calculateRouteStats();
             if (navigator.vibrate) navigator.vibrate(50);
         }
 
         function updateStatsUI(meters, seconds) {
             const statsDiv = document.getElementById("header-stats");
-            if (!meters || !seconds) { statsDiv.style.display = "none"; return; }
+            if (!meters || !seconds) { 
+                statsDiv.style.display = "none"; 
+                return; 
+            }
             statsDiv.style.display = "flex";
 
             const h = Math.floor(seconds / 3600);
@@ -461,8 +554,12 @@
                         points.push({ coords: coords, label: "📍 " + label });
                         renderList();
                         savePointsToStorage();
-                        document.getElementById("header-stats").style.display = "none"; 
                         btnIcon.style.display = "inline"; spinner.style.display = "none";
+                        
+                        // ✅ Автоматично рахуємо
+                        if (points.length >= 2) {
+                            calculateRouteStats();
+                        }
                     });
                 },
                 (err) => { 
@@ -475,44 +572,216 @@
 
         function startNavigationApp() {
             if (points.length < 2) return alert("Додайте мінімум 2 точки!");
+            
+            if (points.length <= 17) {
+                launchSingleRoute(points);
+                return;
+            }
+            
+            const modal = document.getElementById('chunks-modal');
+            const list = document.getElementById('chunks-list');
+            modal.style.display = 'flex';
+            list.innerHTML = '<div class="loading-indicator"><div class="loading-spinner"></div><div>Розраховуємо маршрути...</div></div>';
+            
+            routeChunks = splitIntoChunks(points, 17);
+            
+            console.log(`🔄 Розраховуємо ${routeChunks.length} частин маршруту...`);
+            
+            const promises = routeChunks.map((chunk, index) => {
+                const coords = chunk.map(p => p.coords);
+                console.log(`  Частина ${index + 1}: ${chunk.length} точок`);
+                
+                return SMap.Route.route(coords, { geometry: true, criterion: 'fast' })
+                    .then(route => {
+                        const results = route.getResults();
+                        
+                        console.log(`  ✅ Частина ${index + 1}:`, results);
+                        
+                        let distance = results.length || 0;
+                        let time = results.time || 0;
+                        
+                        console.log(`  📊 ${(distance/1000).toFixed(1)} км, ${Math.round(time/60)} хв`);
+                        
+                        return {
+                            index: index,
+                            distance: distance,
+                            time: time,
+                            launched: false
+                        };
+                    })
+                    .catch(err => {
+                        console.error(`  ❌ Помилка в частині ${index + 1}:`, err);
+                        return {
+                            index: index,
+                            distance: 0,
+                            time: 0,
+                            launched: false,
+                            error: true
+                        };
+                    });
+            });
+            
+            Promise.all(promises).then(stats => {
+                chunkStats = stats;
+                console.log('✅ Всі частини розраховано:', chunkStats);
+                showChunksModal();
+            }).catch(err => {
+                console.error('❌ Помилка розрахунку:', err);
+                list.innerHTML = '<div class="loading-indicator" style="color: #e74c3c;">❌ Помилка розрахунку маршруту</div>';
+            });
+        }
 
-            const coords = points.map(p => p.coords);
+        function splitIntoChunks(points, maxPoints) {
+            if (points.length <= maxPoints) {
+                return [points];
+            }
+            
+            const chunks = [];
+            let i = 0;
+            
+            while (i < points.length) {
+                const remainingPoints = points.length - i;
+                
+                if (remainingPoints <= maxPoints) {
+                    chunks.push(points.slice(i));
+                    break;
+                } else {
+                    chunks.push(points.slice(i, i + maxPoints));
+                    i += maxPoints - 1;
+                }
+            }
+            
+            console.log('🔧 Розбиття на частини:');
+            chunks.forEach((chunk, idx) => {
+                console.log(`  Частина ${idx + 1}: ${chunk.length} точок`);
+            });
+            
+            return chunks;
+        }
+
+        function showChunksModal() {
+            const list = document.getElementById('chunks-list');
+            
+            list.innerHTML = '';
+            
+            let totalDist = 0;
+            let totalTime = 0;
+            
+            routeChunks.forEach((chunk, i) => {
+                const stats = chunkStats[i];
+                
+                if (!stats.error) {
+                    totalDist += stats.distance;
+                    totalTime += stats.time;
+                }
+                
+                const km = (stats.distance / 1000).toFixed(1);
+                const mins = Math.round(stats.time / 60);
+                
+                const startPoint = chunk[0].label.split(',')[0];
+                const endPoint = chunk[chunk.length - 1].label.split(',')[0];
+                
+                const div = document.createElement('div');
+                div.className = 'chunk-item';
+                div.innerHTML = `
+                    <div class="chunk-info">
+                        <div class="chunk-title">Частина ${i + 1} з ${routeChunks.length}</div>
+                        <div class="chunk-details">📍 ${chunk.length} точок | 🚗 ${km} км | ⏱️ ${mins} хв</div>
+                        <div class="chunk-details" style="font-size: 11px; color: #999; margin-top: 3px;">${startPoint.substring(0, 25)}... → ${endPoint.substring(0, 25)}...</div>
+                    </div>
+                    <button class="chunk-btn" id="chunk-btn-${i}" onclick="launchChunk(${i})">▶ Запустити</button>
+                `;
+                list.appendChild(div);
+            });
+            
+            const totalKm = (totalDist / 1000).toFixed(1);
+            const totalH = Math.floor(totalTime / 3600);
+            const totalM = Math.floor((totalTime % 3600) / 60);
+            const totalTimeStr = totalH > 0 ? `${totalH} год ${totalM} хв` : `${totalM} хв`;
+            
+            const summary = document.createElement('div');
+            summary.style.cssText = 'background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 10px; font-weight: 600; color: #27ae60;';
+            summary.innerHTML = `📊 Загалом: ${totalKm} км, ${totalTimeStr}`;
+            list.appendChild(summary);
+        }
+
+        function closeChunksModal() {
+            document.getElementById('chunks-modal').style.display = 'none';
+        }
+
+        function launchChunk(index) {
+            const chunk = routeChunks[index];
+            const start = chunk[0].coords;
+            const end = chunk[chunk.length - 1].coords;
+            
+            let url = `https://mapy.com/fnc/v1/route`;
+            url += `?start=${start.x},${start.y}`;
+            url += `&end=${end.x},${end.y}`;
+            
+            if (chunk.length > 2) {
+                const waypoints = chunk.slice(1, -1)
+                                      .map(p => `${p.coords.x},${p.coords.y}`)
+                                      .join(';');
+                url += `&waypoints=${waypoints}`;
+            }
+            
+            url += `&routeType=car_fast_traffic`;
+            url += `&navigate=true`;
+            
+            console.log(`=== ЗАПУСК ЧАСТИНИ ${index + 1} ===`);
+            console.log(`URL: ${url}`);
+            
+            window.open(url, `_blank`);
+            
+            chunkStats[index].launched = true;
+            const btn = document.getElementById(`chunk-btn-${index}`);
+            btn.textContent = '✓ Запущено';
+            btn.classList.add('launched');
+            
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        function launchAllChunks() {
+            for (let i = 0; i < routeChunks.length; i++) {
+                setTimeout(() => {
+                    launchChunk(i);
+                }, i * 1500);
+            }
+        }
+
+        function launchSingleRoute(routePoints) {
+            const coords = routePoints.map(p => p.coords);
             
             SMap.Route.route(coords, { geometry: true, criterion: 'fast' }).then(route => {
                 const results = route.getResults();
                 
-                const start = points[0].coords;
-                const end = points[points.length - 1].coords;
+                const start = routePoints[0].coords;
+                const end = routePoints[routePoints.length - 1].coords;
                 
-                // ФОРМАТ З КООРДИНАТАМИ
                 let url = `https://mapy.com/fnc/v1/route`;
                 url += `?start=${start.x},${start.y}`;
                 url += `&end=${end.x},${end.y}`;
                 
-                if (points.length > 2) {
-                    const waypoints = points.slice(1, -1)
+                if (routePoints.length > 2) {
+                    const waypoints = routePoints.slice(1, -1)
                                           .map(p => `${p.coords.x},${p.coords.y}`)
                                           .join(';');
                     url += `&waypoints=${waypoints}`;
                 }
                 
                 url += `&routeType=car_fast_traffic`;
+                url += `&navigate=true`;
                 
-                console.log('=== MAPY.CZ З КООРДИНАТАМИ ===');
-                console.log('Точки маршруту:');
-                points.forEach((p, i) => {
-                    console.log(`  ${i + 1}. "${p.label}"`);
-                    console.log(`     lon=${p.coords.x.toFixed(6)}, lat=${p.coords.y.toFixed(6)}`);
-                });
-                console.log(`\nURL: ${url}`);
-                console.log('=== КІНЕЦЬ ===');
+                console.log('=== ЗАПУСК МАРШРУТУ ===');
+                console.log(`Точок: ${routePoints.length}`);
+                console.log(`URL: ${url}`);
                 
                 window.open(url, '_blank');
                 
                 const distance = (results.length / 1000).toFixed(1);
                 const time = Math.round(results.time / 60);
                 
-                alert(`✅ Маршрут готовий!\n\n🚗 Дистанція: ${distance} км\n⏱️ Час: ${time} хв\n📍 Точок: ${points.length}\n\nMapy.cz відкрився з маршрутом!`);
+                alert(`✅ Навігація запущена!\n\n🚗 Дистанція: ${distance} км\n⏱️ Час: ${time} хв\n📍 Точок: ${routePoints.length}`);
             });
         }
 
