@@ -50,7 +50,10 @@
         #nav-btn { background: #e74c3c; color: white; margin-top: 10px; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); margin-bottom: 0; }
         #nav-btn:active { transform: scale(0.98); }
 
-        #address-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; margin-bottom: 20px; }
+        #address-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; margin-bottom: 20px; 
+            /* ✅ Виправлення для мобільного скролу */ 
+            -webkit-overflow-scrolling: touch;
+        }
         #address-list li { 
             padding: 12px 10px; 
             border-bottom: 1px solid #f5f5f5; 
@@ -58,8 +61,27 @@
             align-items: center; 
             font-size: 16px; 
             background: #fff;
-            touch-action: none;
             min-height: 52px;
+            position: relative;
+            /* ✅ Прибрано touch-action для можливості скролу */
+        }
+        
+        /* ✅ Позначення дублікатів */
+        #address-list li.duplicate {
+            background: #fff3cd;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .duplicate-badge {
+            position: absolute;
+            top: 5px;
+            right: 40px;
+            background: #ff9800;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
         }
         
         .sortable-ghost { opacity: 0.4; background: #e3f2fd; }
@@ -71,6 +93,7 @@
             font-size: 20px;
             margin-right: 10px;
             padding: 5px;
+            /* ✅ Тільки handle має touch-action: none */
             touch-action: none;
             align-self: flex-start;
         }
@@ -222,6 +245,26 @@
             }
         }
 
+        // ✅ ФУНКЦІЯ для перевірки дублікатів
+        function findDuplicates() {
+            const duplicates = new Set();
+            const seen = new Map();
+            
+            points.forEach((p, index) => {
+                // Порівнюємо координати з точністю до 4 знаків
+                const key = `${p.coords.x.toFixed(4)},${p.coords.y.toFixed(4)}`;
+                
+                if (seen.has(key)) {
+                    duplicates.add(index);
+                    duplicates.add(seen.get(key));
+                } else {
+                    seen.set(key, index);
+                }
+            });
+            
+            return duplicates;
+        }
+
         function savePointsToStorage() {
             try {
                 const simplePoints = points.map(p => ({
@@ -247,7 +290,6 @@
                     }));
                     console.log(`✅ Завантажено ${points.length} точок з localStorage`);
                     renderList();
-                    // Автоматично рахуємо маршрут при завантаженні
                     if (points.length >= 2) {
                         calculateRouteStats();
                     }
@@ -306,16 +348,24 @@
 
             const list = document.getElementById('address-list');
             sortable = Sortable.create(list, {
-                handle: '.handle', 
+                handle: '.handle',
                 animation: 150,
                 ghostClass: 'sortable-ghost',
                 dragClass: 'sortable-drag',
+                // ✅ ВИПРАВЛЕННЯ для мобільного скролу
+                delay: 200,
+                delayOnTouchOnly: true,
+                touchStartThreshold: 5,
+                forceFallback: false,
+                scroll: true,
+                scrollSensitivity: 100,
+                scrollSpeed: 10,
+                bubbleScroll: true,
                 onEnd: function (evt) {
                     const item = points.splice(evt.oldIndex, 1)[0];
                     points.splice(evt.newIndex, 0, item);
                     renderList(); 
                     savePointsToStorage();
-                    // ✅ Перераховуємо при зміні порядку
                     calculateRouteStats();
                 }
             });
@@ -347,7 +397,6 @@
             savePointsToStorage();
             input.value = "";
             
-            // ✅ Автоматично рахуємо при додаванні
             if (points.length >= 2) {
                 calculateRouteStats();
             } else {
@@ -377,16 +426,27 @@
 
         function renderList() {
             const list = document.getElementById("address-list");
-            list.innerHTML = ""; 
+            list.innerHTML = "";
+            
+            // ✅ Знаходимо дублікати
+            const duplicates = findDuplicates();
             
             points.forEach((p, i) => {
                 const parsed = parseAddress(p.label);
                 const li = document.createElement("li");
                 
+                // ✅ Додаємо клас якщо дублікат
+                if (duplicates.has(i)) {
+                    li.classList.add('duplicate');
+                }
+                
                 let addressHTML = `<div class="city-name">${parsed.city}</div>`;
                 if (parsed.address) {
                     addressHTML += `<div class="address-detail">${parsed.address}</div>`;
                 }
+                
+                // ✅ Додаємо бейдж якщо дублікат
+                const duplicateBadge = duplicates.has(i) ? '<span class="duplicate-badge">⚠️ ДУБЛІКАТ</span>' : '';
                 
                 li.innerHTML = `
                     <div class="handle">☰</div>
@@ -394,6 +454,7 @@
                     <div class="text">
                         ${addressHTML}
                     </div>
+                    ${duplicateBadge}
                     <div class="del" onclick="removePoint(${i})">✕</div>
                 `;
                 list.appendChild(li);
@@ -407,7 +468,6 @@
             renderList();
             savePointsToStorage();
             
-            // ✅ Перераховуємо при видаленні
             if (points.length >= 2) {
                 calculateRouteStats();
             } else {
@@ -458,26 +518,22 @@
             });
         }
 
-        // ✅ НОВА ФУНКЦІЯ для автоматичного перерахунку
         function calculateRouteStats() {
             if (points.length < 2) {
                 document.getElementById("header-stats").style.display = "none";
                 return;
             }
 
-            // Відміняємо попередній таймер якщо є
             if (routeCalculationTimeout) {
                 clearTimeout(routeCalculationTimeout);
             }
 
-            // Показуємо індикатор завантаження
             const statsDiv = document.getElementById("header-stats");
             statsDiv.style.display = "flex";
             statsDiv.classList.add("loading");
             document.getElementById("stat-time").innerText = "...";
             document.getElementById("stat-dist").innerText = "...";
 
-            // Затримка щоб не робити занадто багато запитів
             routeCalculationTimeout = setTimeout(() => {
                 const coords = points.map(p => p.coords);
                 
@@ -495,7 +551,7 @@
                         statsDiv.style.display = "none";
                         statsDiv.classList.remove("loading");
                     });
-            }, 500); // Затримка 500мс
+            }, 500);
         }
 
         function optimizePointsOrder() {
@@ -513,7 +569,6 @@
             points = sorted;
             renderList();
             savePointsToStorage();
-            // ✅ Перераховуємо після оптимізації
             calculateRouteStats();
             if (navigator.vibrate) navigator.vibrate(50);
         }
@@ -556,7 +611,6 @@
                         savePointsToStorage();
                         btnIcon.style.display = "inline"; spinner.style.display = "none";
                         
-                        // ✅ Автоматично рахуємо
                         if (points.length >= 2) {
                             calculateRouteStats();
                         }
