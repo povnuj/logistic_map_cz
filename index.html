@@ -1,845 +1,714 @@
 <!DOCTYPE html>
 <html lang="uk">
-<head>
+  <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Povnuj MapCZ</title>
-    
+
     <!-- Mapy.cz API -->
     <script type="text/javascript" src="https://api.mapy.cz/loader.js"></script>
-    
+
     <!-- SortableJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    
+    <script src="script.js"></script>
     <style>
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; background: #fff; }
-        
-        #map-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: none; background: #eee; }
-        #close-map-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #34495e; color: white; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 30; display: none; font-weight: 600; cursor: pointer; align-items: center; gap: 8px; }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+      }
 
-        #main-view { display: flex; flex-direction: column; height: 100vh; padding: 20px; padding-bottom: 70px; box-sizing: border-box; background: #fff; z-index: 10; }
+      #map-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 20;
+        display: none;
+        background: #eee;
+      }
+      #close-map-btn {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #34495e;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 30px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        z-index: 30;
+        display: none;
+        font-weight: 600;
+        cursor: pointer;
+        align-items: center;
+        gap: 8px;
+      }
 
-        .header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; height: 50px; }
-        .header-title-group { display: flex; align-items: center; gap: 10px; }
-        h2 { margin: 0; font-size: 22px; color: #333; font-weight: 700; }
-        .count-badge { background: #f0f0f0; padding: 4px 10px; border-radius: 12px; font-size: 14px; font-weight: bold; color: #555; }
-        
-        #header-stats { display: none; flex-direction: column; align-items: flex-end; justify-content: center; background: #e1f5fe; padding: 6px 12px; border-radius: 8px; }
-        #header-stats.loading { opacity: 0.5; }
-        .stat-time { font-size: 15px; font-weight: 700; color: #0277bd; line-height: 1.2; }
-        .stat-dist { font-size: 12px; font-weight: 500; color: #546e7a; }
+      #main-view {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 20px;
+        padding-bottom: 70px;
+        box-sizing: border-box;
+        background: #fff;
+        z-index: 10;
+      }
 
-        .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        .input-wrapper { position: relative; flex-grow: 1; }
-        input[type="text"] { width: 100%; padding: 16px; border: 2px solid #eee; border-radius: 12px; font-size: 16px; box-sizing: border-box; background: #fbfbfb; transition: border 0.2s; }
-        input:focus { border-color: #3498db; outline: none; background: #fff; }
+      .header {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 50px;
+      }
+      .header-title-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      h2 {
+        margin: 0;
+        font-size: 22px;
+        color: #333;
+        font-weight: 700;
+      }
+      .count-badge {
+        background: #f0f0f0;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: bold;
+        color: #555;
+      }
 
-        #geo-btn { width: 56px; flex-shrink: 0; background: #eaf2f8; color: #3498db; border: 2px solid #d4e6f1; border-radius: 12px; cursor: pointer; font-size: 24px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; }
-        #geo-btn:active { background: #d4e6f1; }
-        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      #header-stats {
+        display: none;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: center;
+        background: #e1f5fe;
+        padding: 6px 12px;
+        border-radius: 8px;
+      }
+      #header-stats.loading {
+        opacity: 0.5;
+      }
+      .stat-time {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0277bd;
+        line-height: 1.2;
+      }
+      .stat-dist {
+        font-size: 12px;
+        font-weight: 500;
+        color: #546e7a;
+      }
 
-        button { border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: auto; margin-bottom: 10px; }
-        #add-btn { background: #e8f5e9; color: #27ae60; margin-bottom: 20px; }
-        #add-btn:active { background: #c8e6c9; }
-        #sort-btn { background: #fef9e7; color: #f39c12; margin: 0; }
-        #map-btn { background: #eaf2f8; color: #3498db; margin: 0; }
-        #clear-btn { background: #ffebee; color: #e74c3c; margin: 0; }
-        #clear-btn:active { background: #ffcdd2; }
-        #nav-btn { background: #e74c3c; color: white; margin-top: 10px; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); margin-bottom: 0; }
-        #nav-btn:active { transform: scale(0.98); }
+      .input-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      .input-wrapper {
+        position: relative;
+        flex-grow: 1;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 16px;
+        border: 2px solid #eee;
+        border-radius: 12px;
+        font-size: 16px;
+        box-sizing: border-box;
+        background: #fbfbfb;
+        transition: border 0.2s;
+      }
+      input:focus {
+        border-color: #3498db;
+        outline: none;
+        background: #fff;
+      }
 
-        #address-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; margin-bottom: 20px; 
-            /* ✅ Виправлення для мобільного скролу */ 
-            -webkit-overflow-scrolling: touch;
+      #geo-btn {
+        width: 56px;
+        flex-shrink: 0;
+        background: #eaf2f8;
+        color: #3498db;
+        border: 2px solid #d4e6f1;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        margin: 0;
+      }
+      #geo-btn:active {
+        background: #d4e6f1;
+      }
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        display: none;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-        #address-list li { 
-            padding: 12px 10px; 
-            border-bottom: 1px solid #f5f5f5; 
-            display: flex; 
-            align-items: center; 
-            font-size: 16px; 
-            background: #fff;
-            min-height: 52px;
-            position: relative;
-            /* ✅ Прибрано touch-action для можливості скролу */
+        100% {
+          transform: rotate(360deg);
         }
-        
-        /* ✅ Позначення дублікатів */
-        #address-list li.duplicate {
-            background: #fff3cd;
-            border-left: 4px solid #ff9800;
-        }
-        
-        .duplicate-badge {
-            position: absolute;
-            top: 5px;
-            right: 40px;
-            background: #ff9800;
-            color: white;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        
-        .sortable-ghost { opacity: 0.4; background: #e3f2fd; }
-        .sortable-drag { background: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+      }
 
-        .handle {
-            color: #bbb;
-            cursor: grab;
-            font-size: 20px;
-            margin-right: 10px;
-            padding: 5px;
-            /* ✅ Тільки handle має touch-action: none */
-            touch-action: none;
-            align-self: flex-start;
-        }
+      button {
+        border: none;
+        border-radius: 12px;
+        padding: 16px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .action-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        margin-top: auto;
+        margin-bottom: 10px;
+      }
+      #add-btn {
+        background: #e8f5e9;
+        color: #27ae60;
+        margin-bottom: 20px;
+      }
+      #add-btn:active {
+        background: #c8e6c9;
+      }
+      #sort-btn {
+        background: #fef9e7;
+        color: #f39c12;
+        margin: 0;
+      }
+      #map-btn {
+        background: #eaf2f8;
+        color: #3498db;
+        margin: 0;
+      }
+      #clear-btn {
+        background: #ffebee;
+        color: #e74c3c;
+        margin: 0;
+      }
+      #clear-btn:active {
+        background: #ffcdd2;
+      }
+      #nav-btn {
+        background: #e74c3c;
+        color: white;
+        margin-top: 10px;
+        box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        margin-bottom: 0;
+      }
+      #nav-btn:active {
+        transform: scale(0.98);
+      }
 
-        .badge { background: #f0f0f0; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; margin-right: 12px; color: #555; flex-shrink: 0; align-self: flex-start; }
-        
-        .text { 
-            flex-grow: 1; 
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            overflow: hidden;
-            line-height: 1.3;
-        }
-        
-        .city-name {
-            font-weight: 600;
-            font-size: 15px;
-            color: #333;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .address-detail {
-            font-size: 12px;
-            color: #888;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-top: 2px;
-        }
-        
-        .del { color: #e74c3c; padding: 10px; font-size: 22px; cursor: pointer; align-self: flex-start; }
-        
-        .empty-state { text-align: center; color: #999; margin-top: 50px; font-size: 15px; display: none; }
-        .smap-suggest { z-index: 9999 !important; font-size: 16px !important; }
+      #address-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        flex-grow: 1;
+        overflow-y: auto;
+        margin-bottom: 20px;
+        -webkit-overflow-scrolling: touch;
+      }
+      #address-list li {
+        padding: 12px 10px;
+        border-bottom: 1px solid #f5f5f5;
+        display: flex;
+        align-items: center;
+        font-size: 16px;
+        background: #fff;
+        min-height: 52px;
+        position: relative;
+      }
 
-        #chunks-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; }
-        #chunks-content { background: white; border-radius: 16px; padding: 20px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
-        #chunks-content h3 { margin: 0 0 15px 0; font-size: 20px; color: #333; }
-        .chunk-item { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .chunk-info { flex-grow: 1; }
-        .chunk-title { font-weight: 700; font-size: 16px; color: #333; margin-bottom: 5px; }
-        .chunk-details { font-size: 13px; color: #666; }
-        .chunk-btn { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; }
-        .chunk-btn:active { background: #229954; }
-        .chunk-btn.launched { background: #95a5a6; pointer-events: none; }
-        .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
-        .modal-btn { flex: 1; padding: 14px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; }
-        .modal-btn-primary { background: #e74c3c; color: white; }
-        .modal-btn-secondary { background: #ecf0f1; color: #333; }
-        
-        .loading-indicator { text-align: center; padding: 20px; color: #666; }
-        .loading-spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 10px auto; }
+      #address-list li.duplicate {
+        background: #fff3cd;
+        border-left: 4px solid #ff9800;
+      }
+
+      .duplicate-badge {
+        position: absolute;
+        top: 5px;
+        right: 40px;
+        background: #ff9800;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+
+      .sortable-ghost {
+        opacity: 0.4;
+        background: #e3f2fd;
+      }
+      .sortable-drag {
+        background: #fff;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .handle {
+        color: #bbb;
+        cursor: grab;
+        font-size: 20px;
+        margin-right: 10px;
+        padding: 5px;
+        touch-action: none;
+        align-self: flex-start;
+      }
+
+      .badge {
+        background: #f0f0f0;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: bold;
+        margin-right: 12px;
+        color: #555;
+        flex-shrink: 0;
+        align-self: flex-start;
+      }
+
+      .text {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+        line-height: 1.3;
+      }
+
+      .city-name {
+        font-weight: 600;
+        font-size: 15px;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .address-detail {
+        font-size: 12px;
+        color: #888;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+      }
+
+      .del {
+        color: #e74c3c;
+        padding: 10px;
+        font-size: 22px;
+        cursor: pointer;
+        align-self: flex-start;
+      }
+
+      .empty-state {
+        text-align: center;
+        color: #999;
+        margin-top: 50px;
+        font-size: 15px;
+        display: none;
+      }
+      .smap-suggest {
+        z-index: 9999 !important;
+        font-size: 16px !important;
+      }
+
+      /* Модальне вікно для розбиття маршруту */
+      #chunks-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      #chunks-content {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        max-width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      }
+      #chunks-content h3 {
+        margin: 0 0 15px 0;
+        font-size: 20px;
+        color: #333;
+      }
+      .chunk-item {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .chunk-info {
+        flex-grow: 1;
+      }
+      .chunk-title {
+        font-weight: 700;
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 5px;
+      }
+      .chunk-details {
+        font-size: 13px;
+        color: #666;
+      }
+      .chunk-btn {
+        background: #27ae60;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .chunk-btn:active {
+        background: #229954;
+      }
+      .chunk-btn.launched {
+        background: #95a5a6;
+        pointer-events: none;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+      }
+      .modal-btn {
+        flex: 1;
+        padding: 14px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .modal-btn-primary {
+        background: #e74c3c;
+        color: white;
+      }
+      .modal-btn-secondary {
+        background: #ecf0f1;
+        color: #333;
+      }
+
+      .loading-indicator {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+      }
+      .loading-spinner {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 10px auto;
+      }
+
+      /* ✅ НОВІ СТИЛІ: Модальне вікно для порядку міст */
+      #city-order-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 10000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #city-order-content {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      .city-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .city-modal-header h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #333;
+      }
+
+      .city-modal-close {
+        background: none;
+        border: none;
+        font-size: 28px;
+        cursor: pointer;
+        color: #999;
+        padding: 0;
+        width: auto;
+        line-height: 1;
+      }
+
+      .city-modal-description {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 15px;
+        line-height: 1.4;
+      }
+
+      .city-order-item {
+        display: flex;
+        align-items: center;
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        cursor: move;
+        transition: all 0.2s;
+      }
+
+      .city-order-item:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+      }
+
+      .city-handle {
+        font-size: 20px;
+        color: #999;
+        margin-right: 12px;
+        cursor: grab;
+        user-select: none;
+      }
+
+      .city-handle:active {
+        cursor: grabbing;
+      }
+
+      .city-badge {
+        min-width: 35px;
+        height: 35px;
+        background: #3498db;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        margin-right: 12px;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+
+      .city-info {
+        flex: 1;
+      }
+
+      .city-title {
+        font-weight: 600;
+        font-size: 15px;
+        color: #2c3e50;
+        margin-bottom: 3px;
+      }
+
+      .city-count {
+        font-size: 12px;
+        color: #7f8c8d;
+      }
+
+      .city-modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .city-apply-btn {
+        flex: 1;
+        padding: 15px;
+        background: #27ae60;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .city-apply-btn:active {
+        background: #229954;
+      }
+
+      .city-cancel-btn {
+        padding: 15px 20px;
+        background: #e0e0e0;
+        color: #333;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .city-cancel-btn:active {
+        background: #d0d0d0;
+      }
     </style>
-</head>
-<body>
-
+  </head>
+  <body>
     <div id="map-container"></div>
-    <div id="close-map-btn" onclick="closeMap()"><span>✕</span> Закрити карту</div>
+    <div id="close-map-btn" onclick="closeMap()">
+      <span>✕</span> Закрити карту
+    </div>
 
+    <!-- Модальне вікно для розбиття маршруту -->
     <div id="chunks-modal">
-        <div id="chunks-content">
-            <h3>🗺️ Розбиття маршруту</h3>
-            <div id="chunks-list"></div>
-            <div class="modal-actions">
-                <button class="modal-btn modal-btn-primary" onclick="launchAllChunks()">🚀 Запустити всі</button>
-                <button class="modal-btn modal-btn-secondary" onclick="closeChunksModal()">Закрити</button>
-            </div>
+      <div id="chunks-content">
+        <h3>🗺️ Розбиття маршруту</h3>
+        <div id="chunks-list"></div>
+        <div class="modal-actions">
+          <button
+            class="modal-btn modal-btn-primary"
+            onclick="launchAllChunks()"
+          >
+            🚀 Запустити всі
+          </button>
+          <button
+            class="modal-btn modal-btn-secondary"
+            onclick="closeChunksModal()"
+          >
+            Закрити
+          </button>
         </div>
+      </div>
+    </div>
+
+    <!-- ✅ НОВА МОДАЛКА: Порядок населених пунктів -->
+    <div id="city-order-modal">
+      <div id="city-order-content">
+        <div class="city-modal-header">
+          <h3>🗺️ Порядок населених пунктів</h3>
+          <button class="city-modal-close" onclick="closeCityOrderModal()">
+            ✕
+          </button>
+        </div>
+
+        <p class="city-modal-description">
+          Перетягніть міста у потрібному порядку проїзду. Всередині кожного
+          міста точки будуть оптимізовані автоматично.
+        </p>
+
+        <div id="city-order-list">
+          <!-- Сюди додаються міста динамічно -->
+        </div>
+
+        <div class="city-modal-actions">
+          <button class="city-apply-btn" onclick="applyCityOrder()">
+            ✓ Застосувати і оптимізувати
+          </button>
+          <button class="city-cancel-btn" onclick="closeCityOrderModal()">
+            Скасувати
+          </button>
+        </div>
+      </div>
     </div>
 
     <div id="main-view">
-        <div class="header">
-            <div class="header-title-group">
-                <h2>Мій маршрут</h2>
-                <span class="count-badge" id="count">0</span>
-            </div>
-            <div id="header-stats">
-                <div class="stat-time" id="stat-time">--:--</div>
-                <div class="stat-dist" id="stat-dist">-- км</div>
-            </div>
+      <div class="header">
+        <div class="header-title-group">
+          <h2>Мій маршрут</h2>
+          <span class="count-badge" id="count">0</span>
         </div>
-
-        <div class="input-row">
-            <div class="input-wrapper">
-                <input type="text" id="address-input" placeholder="Введіть адресу..." autocomplete="off" />
-            </div>
-            <button id="geo-btn" onclick="addCurrentLocation()">
-                <span id="geo-icon">📍</span>
-                <div id="geo-spinner" class="spinner"></div>
-            </button>
+        <div id="header-stats">
+          <div class="stat-time" id="stat-time">--:--</div>
+          <div class="stat-dist" id="stat-dist">-- км</div>
         </div>
+      </div>
 
-        <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
-
-        <ul id="address-list"></ul>
-
-        <div class="action-grid">
-            <button id="sort-btn" onclick="optimizePointsOrder()">🔃 Сортувати</button>
-            <button id="clear-btn" onclick="clearAllPoints()">🗑️ Очистити</button>
-            <button id="map-btn" onclick="openMap()">🗺 Мапа</button>
+      <div class="input-row">
+        <div class="input-wrapper">
+          <input
+            type="text"
+            id="address-input"
+            placeholder="Введіть адресу..."
+            autocomplete="off"
+          />
         </div>
+        <button id="geo-btn" onclick="addCurrentLocation()">
+          <span id="geo-icon">📍</span>
+          <div id="geo-spinner" class="spinner"></div>
+        </button>
+      </div>
 
-        <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
+      <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
+
+      <ul id="address-list"></ul>
+
+      <div class="action-grid">
+        <button id="sort-btn" onclick="optimizePointsOrder()">
+          🔃 Сортувати
+        </button>
+        <button id="clear-btn" onclick="clearAllPoints()">🗑️ Очистити</button>
+        <button id="map-btn" onclick="openMap()">🗺 Мапа</button>
+      </div>
+
+      <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
     </div>
-
-    <script type="text/javascript">
-        let m, routeLayer, markerLayer;
-        let points = [];
-        let suggest;
-        let mapInitialized = false;
-        let lastSuggestedCoords = null;
-        let sortable; 
-        let routeChunks = [];
-        let chunkStats = [];
-        let routeCalculationTimeout = null;
-
-        const STORAGE_KEY = 'mapczRoutePoints';
-
-        function parseAddress(fullAddress) {
-            if (!fullAddress || fullAddress.trim() === '') {
-                return {
-                    city: 'Невідома адреса',
-                    address: ''
-                };
-            }
-            
-            const parts = fullAddress.split(',').map(s => s.trim());
-            
-            if (parts.length >= 2) {
-                let city = parts[1];
-                let address = parts[0];
-                
-                if (parts.length >= 3 && /^\d{3}\s?\d{2}$/.test(parts[2])) {
-                    address += ', ' + parts[2];
-                }
-                
-                return {
-                    city: city,
-                    address: address
-                };
-            } else {
-                return {
-                    city: fullAddress,
-                    address: ''
-                };
-            }
-        }
-
-        // ✅ ФУНКЦІЯ для перевірки дублікатів
-        function findDuplicates() {
-            const duplicates = new Set();
-            const seen = new Map();
-            
-            points.forEach((p, index) => {
-                // Порівнюємо координати з точністю до 4 знаків
-                const key = `${p.coords.x.toFixed(4)},${p.coords.y.toFixed(4)}`;
-                
-                if (seen.has(key)) {
-                    duplicates.add(index);
-                    duplicates.add(seen.get(key));
-                } else {
-                    seen.set(key, index);
-                }
-            });
-            
-            return duplicates;
-        }
-
-        function savePointsToStorage() {
-            try {
-                const simplePoints = points.map(p => ({
-                    x: p.coords.x,
-                    y: p.coords.y,
-                    label: p.label
-                }));
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(simplePoints));
-                console.log('✅ Точки збережено в localStorage');
-            } catch (e) {
-                console.error('❌ Помилка збереження:', e);
-            }
-        }
-
-        function loadPointsFromStorage() {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEY);
-                if (stored) {
-                    const simplePoints = JSON.parse(stored);
-                    points = simplePoints.map(p => ({
-                        coords: SMap.Coords.fromWGS84(p.x, p.y),
-                        label: p.label
-                    }));
-                    console.log(`✅ Завантажено ${points.length} точок з localStorage`);
-                    renderList();
-                    if (points.length >= 2) {
-                        calculateRouteStats();
-                    }
-                }
-            } catch (e) {
-                console.error('❌ Помилка завантаження:', e);
-                points = [];
-            }
-        }
-
-        function clearAllPoints() {
-            if (points.length === 0) {
-                alert('Список вже порожній!');
-                return;
-            }
-            
-            if (confirm(`Видалити всі ${points.length} точок?\nЦя дія незворотна!`)) {
-                points = [];
-                localStorage.removeItem(STORAGE_KEY);
-                renderList();
-                document.getElementById("header-stats").style.display = "none";
-                console.log('🗑️ Всі точки видалено');
-                
-                if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
-            }
-        }
-
-        function init() {
-            const input = document.getElementById("address-input");
-            
-            suggest = new SMap.Suggest(input, {
-                provider: new SMap.SuggestProvider({
-                    updateParams: params => { params.count = 5; params.lang = 'uk'; }
-                })
-            });
-            
-            suggest.addListener("suggest", (suggestData) => {
-                const data = suggestData.data;
-                lastSuggestedCoords = SMap.Coords.fromWGS84(data.longitude, data.latitude);
-                
-                setTimeout(() => {
-                    new SMap.Geocoder.Reverse(lastSuggestedCoords, (geocoder) => {
-                        const results = geocoder.getResults();
-                        
-                        if (results && results.label) {
-                            input.value = results.label;
-                            console.log('✅ Оновлено інпут:', results.label);
-                        }
-                    });
-                }, 100);
-            });
-
-            input.addEventListener("keypress", function(e) {
-                if (e.key === "Enter") addAddress();
-            });
-
-            const list = document.getElementById('address-list');
-            sortable = Sortable.create(list, {
-                handle: '.handle',
-                animation: 150,
-                ghostClass: 'sortable-ghost',
-                dragClass: 'sortable-drag',
-                // ✅ ВИПРАВЛЕННЯ для мобільного скролу
-                delay: 200,
-                delayOnTouchOnly: true,
-                touchStartThreshold: 5,
-                forceFallback: false,
-                scroll: true,
-                scrollSensitivity: 100,
-                scrollSpeed: 10,
-                bubbleScroll: true,
-                onEnd: function (evt) {
-                    const item = points.splice(evt.oldIndex, 1)[0];
-                    points.splice(evt.newIndex, 0, item);
-                    renderList(); 
-                    savePointsToStorage();
-                    calculateRouteStats();
-                }
-            });
-
-            loadPointsFromStorage();
-        }
-
-        async function addAddress() {
-            const input = document.getElementById("address-input");
-            const val = input.value.trim();
-            if (!val) return;
-
-            let coords = null;
-            let label = val;
-
-            if (lastSuggestedCoords) {
-                coords = lastSuggestedCoords;
-                lastSuggestedCoords = null;
-            } else {
-                const res = await geocode(val);
-                if (!res) return;
-                coords = res.coords;
-                label = res.label;
-            }
-
-            console.log('✅ Додаємо точку:', label);
-            points.push({ coords, label });
-            renderList();
-            savePointsToStorage();
-            input.value = "";
-            
-            if (points.length >= 2) {
-                calculateRouteStats();
-            } else {
-                document.getElementById("header-stats").style.display = "none";
-            }
-        }
-
-        function geocode(addr) {
-            return new Promise(resolve => {
-                new SMap.Geocoder(addr, g => {
-                    const results = g.getResults()[0];
-                    if (results && results.results && results.results.length > 0) {
-                        const result = results.results[0];
-                        let label = result.label || addr;
-                        
-                        resolve({ 
-                            coords: result.coords, 
-                            label: label
-                        });
-                    } else { 
-                        alert("Не знайдено цю адресу"); 
-                        resolve(null); 
-                    }
-                });
-            });
-        }
-
-        function renderList() {
-            const list = document.getElementById("address-list");
-            list.innerHTML = "";
-            
-            // ✅ Знаходимо дублікати
-            const duplicates = findDuplicates();
-            
-            points.forEach((p, i) => {
-                const parsed = parseAddress(p.label);
-                const li = document.createElement("li");
-                
-                // ✅ Додаємо клас якщо дублікат
-                if (duplicates.has(i)) {
-                    li.classList.add('duplicate');
-                }
-                
-                let addressHTML = `<div class="city-name">${parsed.city}</div>`;
-                if (parsed.address) {
-                    addressHTML += `<div class="address-detail">${parsed.address}</div>`;
-                }
-                
-                // ✅ Додаємо бейдж якщо дублікат
-                const duplicateBadge = duplicates.has(i) ? '<span class="duplicate-badge">⚠️ ДУБЛІКАТ</span>' : '';
-                
-                li.innerHTML = `
-                    <div class="handle">☰</div>
-                    <div class="badge">${i+1}</div>
-                    <div class="text">
-                        ${addressHTML}
-                    </div>
-                    ${duplicateBadge}
-                    <div class="del" onclick="removePoint(${i})">✕</div>
-                `;
-                list.appendChild(li);
-            });
-
-            document.getElementById("count").innerText = points.length;
-        }
-
-        function removePoint(i) {
-            points.splice(i, 1);
-            renderList();
-            savePointsToStorage();
-            
-            if (points.length >= 2) {
-                calculateRouteStats();
-            } else {
-                document.getElementById("header-stats").style.display = "none";
-            }
-        }
-
-        function initMap() {
-            const center = SMap.Coords.fromWGS84(15.4, 49.8);
-            m = new SMap(document.getElementById("map-container"), center, 7);
-            m.addDefaultLayer(SMap.DEF_BASE).enable();
-            m.addDefaultControls();
-            routeLayer = new SMap.Layer.Geometry(); m.addLayer(routeLayer); routeLayer.enable();
-            markerLayer = new SMap.Layer.Marker(); m.addLayer(markerLayer); markerLayer.enable();
-        }
-
-        function openMap() {
-            if (points.length === 0) return alert("Спочатку додайте точки!");
-            document.getElementById("map-container").style.display = "block";
-            document.getElementById("close-map-btn").style.display = "flex";
-            if (!mapInitialized) { initMap(); mapInitialized = true; }
-            calculateRoute();
-        }
-
-        function closeMap() {
-            document.getElementById("map-container").style.display = "none";
-            document.getElementById("close-map-btn").style.display = "none";
-        }
-
-        function calculateRoute(isBackground = false) {
-            if (points.length < 2) return;
-            const coords = points.map(p => p.coords);
-            
-            SMap.Route.route(coords, { geometry: true, criterion: 'short' }).then(route => {
-                const results = route.getResults();
-                updateStatsUI(results.length, results.time);
-
-                if (!isBackground) {
-                    if (!mapInitialized) { initMap(); mapInitialized = true; }
-                    markerLayer.removeAll(); routeLayer.removeAll();
-                    points.forEach((p, i) => {
-                        markerLayer.addMarker(new SMap.Marker(p.coords, null, { title: `${i+1}` }));
-                    });
-                    routeLayer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, results.geometry));
-                    const z = m.computeCenterZoom(coords);
-                    m.setCenterZoom(z[0], z[1]);
-                }
-            });
-        }
-
-        function calculateRouteStats() {
-            if (points.length < 2) {
-                document.getElementById("header-stats").style.display = "none";
-                return;
-            }
-
-            if (routeCalculationTimeout) {
-                clearTimeout(routeCalculationTimeout);
-            }
-
-            const statsDiv = document.getElementById("header-stats");
-            statsDiv.style.display = "flex";
-            statsDiv.classList.add("loading");
-            document.getElementById("stat-time").innerText = "...";
-            document.getElementById("stat-dist").innerText = "...";
-
-            routeCalculationTimeout = setTimeout(() => {
-                const coords = points.map(p => p.coords);
-                
-                console.log('🔄 Розраховуємо маршрут...');
-                
-                SMap.Route.route(coords, { geometry: true, criterion: 'fast' })
-                    .then(route => {
-                        const results = route.getResults();
-                        console.log('✅ Маршрут розраховано:', results);
-                        updateStatsUI(results.length, results.time);
-                        statsDiv.classList.remove("loading");
-                    })
-                    .catch(err => {
-                        console.error('❌ Помилка розрахунку:', err);
-                        statsDiv.style.display = "none";
-                        statsDiv.classList.remove("loading");
-                    });
-            }, 500);
-        }
-
-        function optimizePointsOrder() {
-            if(points.length < 3) return alert("Треба мінімум 3 точки");
-            let sorted = [points[0]], remaining = points.slice(1);
-            while(remaining.length > 0) {
-                let cur = sorted[sorted.length-1], nearest = -1, min = Infinity;
-                remaining.forEach((p, i) => {
-                    let d = cur.coords.distance(p.coords);
-                    if(d < min) { min = d; nearest = i; }
-                });
-                sorted.push(remaining[nearest]);
-                remaining.splice(nearest, 1);
-            }
-            points = sorted;
-            renderList();
-            savePointsToStorage();
-            calculateRouteStats();
-            if (navigator.vibrate) navigator.vibrate(50);
-        }
-
-        function updateStatsUI(meters, seconds) {
-            const statsDiv = document.getElementById("header-stats");
-            if (!meters || !seconds) { 
-                statsDiv.style.display = "none"; 
-                return; 
-            }
-            statsDiv.style.display = "flex";
-
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const km = (meters / 1000).toFixed(1);
-
-            let timeStr = "";
-            if (h > 0) timeStr += `${h} год `;
-            timeStr += `${m} хв`;
-            
-            document.getElementById("stat-time").innerText = timeStr;
-            document.getElementById("stat-dist").innerText = `${km} км`;
-        }
-
-        function addCurrentLocation() {
-            if (!navigator.geolocation) return alert("Немає доступу до GPS");
-            const btnIcon = document.getElementById("geo-icon");
-            const spinner = document.getElementById("geo-spinner");
-            btnIcon.style.display = "none"; spinner.style.display = "block";
-
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const coords = SMap.Coords.fromWGS84(position.coords.longitude, position.coords.latitude);
-                    new SMap.Geocoder.Reverse(coords, (geocoder) => {
-                        const results = geocoder.getResults();
-                        let label = results.label || `${coords.y.toFixed(5)}, ${coords.x.toFixed(5)}`;
-                        
-                        points.push({ coords: coords, label: "📍 " + label });
-                        renderList();
-                        savePointsToStorage();
-                        btnIcon.style.display = "inline"; spinner.style.display = "none";
-                        
-                        if (points.length >= 2) {
-                            calculateRouteStats();
-                        }
-                    });
-                },
-                (err) => { 
-                    alert("GPS помилка"); 
-                    btnIcon.style.display = "inline"; spinner.style.display = "none"; 
-                },
-                { enableHighAccuracy: true }
-            );
-        }
-
-        function startNavigationApp() {
-            if (points.length < 2) return alert("Додайте мінімум 2 точки!");
-            
-            if (points.length <= 17) {
-                launchSingleRoute(points);
-                return;
-            }
-            
-            const modal = document.getElementById('chunks-modal');
-            const list = document.getElementById('chunks-list');
-            modal.style.display = 'flex';
-            list.innerHTML = '<div class="loading-indicator"><div class="loading-spinner"></div><div>Розраховуємо маршрути...</div></div>';
-            
-            routeChunks = splitIntoChunks(points, 17);
-            
-            console.log(`🔄 Розраховуємо ${routeChunks.length} частин маршруту...`);
-            
-            const promises = routeChunks.map((chunk, index) => {
-                const coords = chunk.map(p => p.coords);
-                console.log(`  Частина ${index + 1}: ${chunk.length} точок`);
-                
-                return SMap.Route.route(coords, { geometry: true, criterion: 'fast' })
-                    .then(route => {
-                        const results = route.getResults();
-                        
-                        console.log(`  ✅ Частина ${index + 1}:`, results);
-                        
-                        let distance = results.length || 0;
-                        let time = results.time || 0;
-                        
-                        console.log(`  📊 ${(distance/1000).toFixed(1)} км, ${Math.round(time/60)} хв`);
-                        
-                        return {
-                            index: index,
-                            distance: distance,
-                            time: time,
-                            launched: false
-                        };
-                    })
-                    .catch(err => {
-                        console.error(`  ❌ Помилка в частині ${index + 1}:`, err);
-                        return {
-                            index: index,
-                            distance: 0,
-                            time: 0,
-                            launched: false,
-                            error: true
-                        };
-                    });
-            });
-            
-            Promise.all(promises).then(stats => {
-                chunkStats = stats;
-                console.log('✅ Всі частини розраховано:', chunkStats);
-                showChunksModal();
-            }).catch(err => {
-                console.error('❌ Помилка розрахунку:', err);
-                list.innerHTML = '<div class="loading-indicator" style="color: #e74c3c;">❌ Помилка розрахунку маршруту</div>';
-            });
-        }
-
-        function splitIntoChunks(points, maxPoints) {
-            if (points.length <= maxPoints) {
-                return [points];
-            }
-            
-            const chunks = [];
-            let i = 0;
-            
-            while (i < points.length) {
-                const remainingPoints = points.length - i;
-                
-                if (remainingPoints <= maxPoints) {
-                    chunks.push(points.slice(i));
-                    break;
-                } else {
-                    chunks.push(points.slice(i, i + maxPoints));
-                    i += maxPoints - 1;
-                }
-            }
-            
-            console.log('🔧 Розбиття на частини:');
-            chunks.forEach((chunk, idx) => {
-                console.log(`  Частина ${idx + 1}: ${chunk.length} точок`);
-            });
-            
-            return chunks;
-        }
-
-        function showChunksModal() {
-            const list = document.getElementById('chunks-list');
-            
-            list.innerHTML = '';
-            
-            let totalDist = 0;
-            let totalTime = 0;
-            
-            routeChunks.forEach((chunk, i) => {
-                const stats = chunkStats[i];
-                
-                if (!stats.error) {
-                    totalDist += stats.distance;
-                    totalTime += stats.time;
-                }
-                
-                const km = (stats.distance / 1000).toFixed(1);
-                const mins = Math.round(stats.time / 60);
-                
-                const startPoint = chunk[0].label.split(',')[0];
-                const endPoint = chunk[chunk.length - 1].label.split(',')[0];
-                
-                const div = document.createElement('div');
-                div.className = 'chunk-item';
-                div.innerHTML = `
-                    <div class="chunk-info">
-                        <div class="chunk-title">Частина ${i + 1} з ${routeChunks.length}</div>
-                        <div class="chunk-details">📍 ${chunk.length} точок | 🚗 ${km} км | ⏱️ ${mins} хв</div>
-                        <div class="chunk-details" style="font-size: 11px; color: #999; margin-top: 3px;">${startPoint.substring(0, 25)}... → ${endPoint.substring(0, 25)}...</div>
-                    </div>
-                    <button class="chunk-btn" id="chunk-btn-${i}" onclick="launchChunk(${i})">▶ Запустити</button>
-                `;
-                list.appendChild(div);
-            });
-            
-            const totalKm = (totalDist / 1000).toFixed(1);
-            const totalH = Math.floor(totalTime / 3600);
-            const totalM = Math.floor((totalTime % 3600) / 60);
-            const totalTimeStr = totalH > 0 ? `${totalH} год ${totalM} хв` : `${totalM} хв`;
-            
-            const summary = document.createElement('div');
-            summary.style.cssText = 'background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 10px; font-weight: 600; color: #27ae60;';
-            summary.innerHTML = `📊 Загалом: ${totalKm} км, ${totalTimeStr}`;
-            list.appendChild(summary);
-        }
-
-        function closeChunksModal() {
-            document.getElementById('chunks-modal').style.display = 'none';
-        }
-
-        function launchChunk(index) {
-            const chunk = routeChunks[index];
-            const start = chunk[0].coords;
-            const end = chunk[chunk.length - 1].coords;
-            
-            let url = `https://mapy.com/fnc/v1/route`;
-            url += `?start=${start.x},${start.y}`;
-            url += `&end=${end.x},${end.y}`;
-            
-            if (chunk.length > 2) {
-                const waypoints = chunk.slice(1, -1)
-                                      .map(p => `${p.coords.x},${p.coords.y}`)
-                                      .join(';');
-                url += `&waypoints=${waypoints}`;
-            }
-            
-            url += `&routeType=car_fast_traffic`;
-            url += `&navigate=true`;
-            
-            console.log(`=== ЗАПУСК ЧАСТИНИ ${index + 1} ===`);
-            console.log(`URL: ${url}`);
-            
-            window.open(url, `_blank`);
-            
-            chunkStats[index].launched = true;
-            const btn = document.getElementById(`chunk-btn-${index}`);
-            btn.textContent = '✓ Запущено';
-            btn.classList.add('launched');
-            
-            if (navigator.vibrate) navigator.vibrate(50);
-        }
-
-        function launchAllChunks() {
-            for (let i = 0; i < routeChunks.length; i++) {
-                setTimeout(() => {
-                    launchChunk(i);
-                }, i * 1500);
-            }
-        }
-
-        function launchSingleRoute(routePoints) {
-            const coords = routePoints.map(p => p.coords);
-            
-            SMap.Route.route(coords, { geometry: true, criterion: 'fast' }).then(route => {
-                const results = route.getResults();
-                
-                const start = routePoints[0].coords;
-                const end = routePoints[routePoints.length - 1].coords;
-                
-                let url = `https://mapy.com/fnc/v1/route`;
-                url += `?start=${start.x},${start.y}`;
-                url += `&end=${end.x},${end.y}`;
-                
-                if (routePoints.length > 2) {
-                    const waypoints = routePoints.slice(1, -1)
-                                          .map(p => `${p.coords.x},${p.coords.y}`)
-                                          .join(';');
-                    url += `&waypoints=${waypoints}`;
-                }
-                
-                url += `&routeType=car_fast_traffic`;
-                url += `&navigate=true`;
-                
-                console.log('=== ЗАПУСК МАРШРУТУ ===');
-                console.log(`Точок: ${routePoints.length}`);
-                console.log(`URL: ${url}`);
-                
-                window.open(url, '_blank');
-                
-                const distance = (results.length / 1000).toFixed(1);
-                const time = Math.round(results.time / 60);
-                
-                alert(`✅ Навігація запущена!\n\n🚗 Дистанція: ${distance} км\n⏱️ Час: ${time} хв\n📍 Точок: ${routePoints.length}`);
-            });
-        }
-
-        Loader.load(null, { POI: true, suggest: true }, init);
-    </script>
-</body>
+  </body>
 </html>
