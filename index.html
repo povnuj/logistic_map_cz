@@ -1,670 +1,111 @@
 <!DOCTYPE html>
 <html lang="uk">
-  <head>
+<head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Povnuj MapCZ</title>
-
-    <!-- Mapy.cz API -->
-    <script type="text/javascript" src="https://api.mapy.cz/loader.js"></script>
-
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <!-- SortableJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <script src="script.js"></script>
+    
     <style>
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Helvetica, Arial, sans-serif;
-        height: 100vh;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        background: #fff;
-      }
-
-      #map-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 20;
-        display: none;
-        background: #eee;
-      }
-      #close-map-btn {
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #34495e;
-        color: white;
-        padding: 12px 24px;
-        border-radius: 30px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        z-index: 30;
-        display: none;
-        font-weight: 600;
-        cursor: pointer;
-        align-items: center;
-        gap: 8px;
-      }
-
-      #main-view {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        padding: 20px;
-        padding-bottom: 70px;
-        box-sizing: border-box;
-        background: #fff;
-        z-index: 10;
-      }
-
-      .header {
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        height: 50px;
-      }
-      .header-title-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      h2 {
-        margin: 0;
-        font-size: 22px;
-        color: #333;
-        font-weight: 700;
-      }
-      .count-badge {
-        background: #f0f0f0;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: bold;
-        color: #555;
-      }
-
-      #header-stats {
-        display: none;
-        flex-direction: column;
-        align-items: flex-end;
-        justify-content: center;
-        background: #e1f5fe;
-        padding: 6px 12px;
-        border-radius: 8px;
-      }
-      #header-stats.loading {
-        opacity: 0.5;
-      }
-      .stat-time {
-        font-size: 15px;
-        font-weight: 700;
-        color: #0277bd;
-        line-height: 1.2;
-      }
-      .stat-dist {
-        font-size: 12px;
-        font-weight: 500;
-        color: #546e7a;
-      }
-
-      .input-row {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 15px;
-      }
-      .input-wrapper {
-        position: relative;
-        flex-grow: 1;
-      }
-      input[type="text"] {
-        width: 100%;
-        padding: 16px;
-        border: 2px solid #eee;
-        border-radius: 12px;
-        font-size: 16px;
-        box-sizing: border-box;
-        background: #fbfbfb;
-        transition: border 0.2s;
-      }
-      input:focus {
-        border-color: #3498db;
-        outline: none;
-        background: #fff;
-      }
-
-      #geo-btn {
-        width: 56px;
-        flex-shrink: 0;
-        background: #eaf2f8;
-        color: #3498db;
-        border: 2px solid #d4e6f1;
-        border-radius: 12px;
-        cursor: pointer;
-        font-size: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-        margin: 0;
-      }
-      #geo-btn:active {
-        background: #d4e6f1;
-      }
-      .spinner {
-        border: 3px solid #f3f3f3;
-        border-top: 3px solid #3498db;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        animation: spin 1s linear infinite;
-        display: none;
-      }
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-
-      button {
-        border: none;
-        border-radius: 12px;
-        padding: 16px;
-        font-size: 16px;
-        font-weight: 700;
-        cursor: pointer;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        margin-bottom: 10px;
-      }
-      .action-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 10px;
-        margin-top: auto;
-        margin-bottom: 10px;
-      }
-      #add-btn {
-        background: #e8f5e9;
-        color: #27ae60;
-        margin-bottom: 20px;
-      }
-      #add-btn:active {
-        background: #c8e6c9;
-      }
-      #sort-btn {
-        background: #fef9e7;
-        color: #f39c12;
-        margin: 0;
-      }
-      #map-btn {
-        background: #eaf2f8;
-        color: #3498db;
-        margin: 0;
-      }
-      #clear-btn {
-        background: #ffebee;
-        color: #e74c3c;
-        margin: 0;
-      }
-      #clear-btn:active {
-        background: #ffcdd2;
-      }
-      #nav-btn {
-        background: #e74c3c;
-        color: white;
-        margin-top: 10px;
-        box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
-        margin-bottom: 0;
-      }
-      #nav-btn:active {
-        transform: scale(0.98);
-      }
-
-      #address-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        flex-grow: 1;
-        overflow-y: auto;
-        margin-bottom: 20px;
-        -webkit-overflow-scrolling: touch;
-      }
-      #address-list li {
-        padding: 12px 10px;
-        border-bottom: 1px solid #f5f5f5;
-        display: flex;
-        align-items: center;
-        font-size: 16px;
-        background: #fff;
-        min-height: 52px;
-        position: relative;
-      }
-
-      #address-list li.duplicate {
-        background: #fff3cd;
-        border-left: 4px solid #ff9800;
-      }
-
-      .duplicate-badge {
-        position: absolute;
-        top: 5px;
-        right: 40px;
-        background: #ff9800;
-        color: white;
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-weight: bold;
-      }
-
-      .sortable-ghost {
-        opacity: 0.4;
-        background: #e3f2fd;
-      }
-      .sortable-drag {
-        background: #fff;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-      }
-
-      .handle {
-        color: #bbb;
-        cursor: grab;
-        font-size: 20px;
-        margin-right: 10px;
-        padding: 5px;
-        touch-action: none;
-        align-self: flex-start;
-      }
-
-      .badge {
-        background: #f0f0f0;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        font-weight: bold;
-        margin-right: 12px;
-        color: #555;
-        flex-shrink: 0;
-        align-self: flex-start;
-      }
-
-      .text {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        overflow: hidden;
-        line-height: 1.3;
-      }
-
-      .city-name {
-        font-weight: 600;
-        font-size: 15px;
-        color: #333;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .address-detail {
-        font-size: 12px;
-        color: #888;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin-top: 2px;
-      }
-
-      .del {
-        color: #e74c3c;
-        padding: 10px;
-        font-size: 22px;
-        cursor: pointer;
-        align-self: flex-start;
-      }
-
-      .empty-state {
-        text-align: center;
-        color: #999;
-        margin-top: 50px;
-        font-size: 15px;
-        display: none;
-      }
-      .smap-suggest {
-        z-index: 9999 !important;
-        font-size: 16px !important;
-      }
-
-      /* Модальне вікно для розбиття маршруту */
-      #chunks-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 100;
-        display: none;
-        align-items: center;
-        justify-content: center;
-      }
-      #chunks-content {
-        background: white;
-        border-radius: 16px;
-        padding: 20px;
-        max-width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-      }
-      #chunks-content h3 {
-        margin: 0 0 15px 0;
-        font-size: 20px;
-        color: #333;
-      }
-      .chunk-item {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .chunk-info {
-        flex-grow: 1;
-      }
-      .chunk-title {
-        font-weight: 700;
-        font-size: 16px;
-        color: #333;
-        margin-bottom: 5px;
-      }
-      .chunk-details {
-        font-size: 13px;
-        color: #666;
-      }
-      .chunk-btn {
-        background: #27ae60;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 700;
-        cursor: pointer;
-        font-size: 14px;
-      }
-      .chunk-btn:active {
-        background: #229954;
-      }
-      .chunk-btn.launched {
-        background: #95a5a6;
-        pointer-events: none;
-      }
-      .modal-actions {
-        display: flex;
-        gap: 10px;
-        margin-top: 15px;
-      }
-      .modal-btn {
-        flex: 1;
-        padding: 14px;
-        border-radius: 10px;
-        border: none;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .modal-btn-primary {
-        background: #e74c3c;
-        color: white;
-      }
-      .modal-btn-secondary {
-        background: #ecf0f1;
-        color: #333;
-      }
-
-      .loading-indicator {
-        text-align: center;
-        padding: 20px;
-        color: #666;
-      }
-      .loading-spinner {
-        display: inline-block;
-        width: 30px;
-        height: 30px;
-        border: 3px solid #f3f3f3;
-        border-top: 3px solid #3498db;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 10px auto;
-      }
-
-      /* ✅ НОВІ СТИЛІ: Модальне вікно для порядку міст */
-      #city-order-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        z-index: 10000;
-        display: none;
-        justify-content: center;
-        align-items: center;
-      }
-
-      #city-order-content {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        max-width: 500px;
-        width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-      }
-
-      .city-modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-      }
-
-      .city-modal-header h3 {
-        margin: 0;
-        font-size: 18px;
-        color: #333;
-      }
-
-      .city-modal-close {
-        background: none;
-        border: none;
-        font-size: 28px;
-        cursor: pointer;
-        color: #999;
-        padding: 0;
-        width: auto;
-        line-height: 1;
-      }
-
-      .city-modal-description {
-        color: #666;
-        font-size: 14px;
-        margin-bottom: 15px;
-        line-height: 1.4;
-      }
-
-      .city-order-item {
-        display: flex;
-        align-items: center;
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 10px;
-        cursor: move;
-        transition: all 0.2s;
-      }
-
-      .city-order-item:hover {
-        background: #e9ecef;
-        transform: translateX(5px);
-      }
-
-      .city-handle {
-        font-size: 20px;
-        color: #999;
-        margin-right: 12px;
-        cursor: grab;
-        user-select: none;
-      }
-
-      .city-handle:active {
-        cursor: grabbing;
-      }
-
-      .city-badge {
-        min-width: 35px;
-        height: 35px;
-        background: #3498db;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        margin-right: 12px;
-        font-size: 14px;
-        flex-shrink: 0;
-      }
-
-      .city-info {
-        flex: 1;
-      }
-
-      .city-title {
-        font-weight: 600;
-        font-size: 15px;
-        color: #2c3e50;
-        margin-bottom: 3px;
-      }
-
-      .city-count {
-        font-size: 12px;
-        color: #7f8c8d;
-      }
-
-      .city-modal-actions {
-        display: flex;
-        gap: 10px;
-        margin-top: 20px;
-      }
-
-      .city-apply-btn {
-        flex: 1;
-        padding: 15px;
-        background: #27ae60;
-        color: white;
-        border: none;
-        border-radius: 10px;
-        font-weight: 600;
-        cursor: pointer;
-        font-size: 16px;
-      }
-
-      .city-apply-btn:active {
-        background: #229954;
-      }
-
-      .city-cancel-btn {
-        padding: 15px 20px;
-        background: #e0e0e0;
-        color: #333;
-        border: none;
-        border-radius: 10px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-
-      .city-cancel-btn:active {
-        background: #d0d0d0;
-      }
+      /* ... ваш існуючий CSS ... */
+      body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; background: #fff; }
+      #map-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; display: none; background: #eee; }
+      #close-map-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #34495e; color: white; padding: 12px 24px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 30; display: none; font-weight: 600; cursor: pointer; align-items: center; gap: 8px; }
+      #main-view { display: flex; flex-direction: column; height: 100vh; padding: 20px; padding-bottom: 70px; box-sizing: border-box; background: #fff; z-index: 10; }
+      .header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; height: 50px; }
+      .header-title-group { display: flex; align-items: center; gap: 10px; }
+      h2 { margin: 0; font-size: 22px; color: #333; font-weight: 700; }
+      .count-badge { background: #f0f0f0; padding: 4px 10px; border-radius: 12px; font-size: 14px; font-weight: bold; color: #555; }
+      #header-stats { display: none; flex-direction: column; align-items: flex-end; justify-content: center; background: #e1f5fe; padding: 6px 12px; border-radius: 8px; }
+      #header-stats.loading { opacity: 0.5; }
+      .stat-time { font-size: 15px; font-weight: 700; color: #0277bd; line-height: 1.2; }
+      .stat-dist { font-size: 12px; font-weight: 500; color: #546e7a; }
+      .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
+      .input-wrapper { position: relative; flex-grow: 1; }
+      input[type="text"] { width: 100%; padding: 16px; border: 2px solid #eee; border-radius: 12px; font-size: 16px; box-sizing: border-box; background: #fbfbfb; transition: border 0.2s; }
+      input:focus { border-color: #3498db; outline: none; background: #fff; }
+      #geo-btn { width: 56px; flex-shrink: 0; background: #eaf2f8; color: #3498db; border: 2px solid #d4e6f1; border-radius: 12px; cursor: pointer; font-size: 24px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; }
+      #geo-btn:active { background: #d4e6f1; }
+      .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      button { border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+      .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: auto; margin-bottom: 10px; }
+      #add-btn { background: #e8f5e9; color: #27ae60; margin-bottom: 20px; }
+      #add-btn:active { background: #c8e6c9; }
+      #sort-btn { background: #fef9e7; color: #f39c12; margin: 0; }
+      #map-btn { background: #eaf2f8; color: #3498db; margin: 0; }
+      #clear-btn { background: #ffebee; color: #e74c3c; margin: 0; }
+      #clear-btn:active { background: #ffcdd2; }
+      #nav-btn { background: #e74c3c; color: white; margin-top: 10px; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); margin-bottom: 0; }
+      #nav-btn:active { transform: scale(0.98); }
+      #address-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; margin-bottom: 20px; -webkit-overflow-scrolling: touch; }
+      #address-list li { padding: 12px 10px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; font-size: 16px; background: #fff; min-height: 52px; position: relative; }
+      #address-list li.duplicate { background: #fff3cd; border-left: 4px solid #ff9800; }
+      .duplicate-badge { position: absolute; top: 5px; right: 40px; background: #ff9800; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+      .sortable-ghost { opacity: 0.4; background: #e3f2fd; }
+      .sortable-drag { background: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+      .handle { color: #bbb; cursor: grab; font-size: 20px; margin-right: 10px; padding: 5px; touch-action: none; align-self: flex-start; }
+      .badge { background: #f0f0f0; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; margin-right: 12px; color: #555; flex-shrink: 0; align-self: flex-start; }
+      .text { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; line-height: 1.3; }
+      .city-name { font-weight: 600; font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .address-detail { font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+      .del { color: #e74c3c; padding: 10px; font-size: 22px; cursor: pointer; align-self: flex-start; }
+      
+      /* Autocomplete dropdown */
+      .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #3498db; border-top: none; border-radius: 0 0 12px 12px; max-height: 300px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+      .autocomplete-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+      .autocomplete-item:hover { background: #f5f5f5; }
+      .autocomplete-item:last-child { border-bottom: none; }
+      
+      /* Модальні вікна - існуючі стилі */
+      #chunks-modal, #city-order-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; }
+      #chunks-content, #city-order-content { background: white; border-radius: 16px; padding: 20px; max-width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+      .chunk-item { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+      .chunk-btn { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; }
+      .chunk-btn.launched { background: #95a5a6; pointer-events: none; }
+      .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
+      .modal-btn { flex: 1; padding: 14px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; }
+      .modal-btn-primary { background: #e74c3c; color: white; }
+      .modal-btn-secondary { background: #ecf0f1; color: #333; }
+      .city-order-item { display: flex; align-items: center; background: #f8f9fa; border-radius: 10px; padding: 12px; margin-bottom: 10px; cursor: move; }
+      .city-handle { font-size: 20px; color: #999; margin-right: 12px; cursor: grab; }
+      .city-badge { min-width: 35px; height: 35px; background: #3498db; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 12px; font-size: 14px; }
+      .city-info { flex: 1; }
+      .city-title { font-weight: 600; font-size: 15px; color: #2c3e50; margin-bottom: 3px; }
+      .city-count { font-size: 12px; color: #7f8c8d; }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div id="map-container"></div>
-    <div id="close-map-btn" onclick="closeMap()">
-      <span>✕</span> Закрити карту
-    </div>
+    <div id="close-map-btn" onclick="closeMap()"><span>✕</span> Закрити карту</div>
 
-    <!-- Модальне вікно для розбиття маршруту -->
     <div id="chunks-modal">
       <div id="chunks-content">
         <h3>🗺️ Розбиття маршруту</h3>
         <div id="chunks-list"></div>
         <div class="modal-actions">
-          <button
-            class="modal-btn modal-btn-primary"
-            onclick="launchAllChunks()"
-          >
-            🚀 Запустити всі
-          </button>
-          <button
-            class="modal-btn modal-btn-secondary"
-            onclick="closeChunksModal()"
-          >
-            Закрити
-          </button>
+          <button class="modal-btn modal-btn-primary" onclick="launchAllChunks()">🚀 Запустити всі</button>
+          <button class="modal-btn modal-btn-secondary" onclick="closeChunksModal()">Закрити</button>
         </div>
       </div>
     </div>
 
-    <!-- ✅ НОВА МОДАЛКА: Порядок населених пунктів -->
     <div id="city-order-modal">
       <div id="city-order-content">
-        <div class="city-modal-header">
-          <h3>🗺️ Порядок населених пунктів</h3>
-          <button class="city-modal-close" onclick="closeCityOrderModal()">
-            ✕
-          </button>
-        </div>
-
-        <p class="city-modal-description">
-          Перетягніть міста у потрібному порядку проїзду. Всередині кожного
-          міста точки будуть оптимізовані автоматично.
-        </p>
-
-        <div id="city-order-list">
-          <!-- Сюди додаються міста динамічно -->
-        </div>
-
-        <div class="city-modal-actions">
-          <button class="city-apply-btn" onclick="applyCityOrder()">
-            ✓ Застосувати і оптимізувати
-          </button>
-          <button class="city-cancel-btn" onclick="closeCityOrderModal()">
-            Скасувати
-          </button>
+        <h3>🏙️ Порядок населених пунктів</h3>
+        <p style="color: #666; font-size: 14px; margin: 0 0 15px 0;">Перетягніть міста для зміни порядку маршруту</p>
+        <div id="city-order-list"></div>
+        <div class="modal-actions">
+          <button class="modal-btn modal-btn-primary" onclick="applyCityOrder()">✓ Застосувати</button>
+          <button class="modal-btn modal-btn-secondary" onclick="closeCityOrderModal()">Скасувати</button>
         </div>
       </div>
     </div>
@@ -683,12 +124,8 @@
 
       <div class="input-row">
         <div class="input-wrapper">
-          <input
-            type="text"
-            id="address-input"
-            placeholder="Введіть адресу..."
-            autocomplete="off"
-          />
+          <input type="text" id="address-input" placeholder="Введіть адресу..." autocomplete="off" />
+          <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
         </div>
         <button id="geo-btn" onclick="addCurrentLocation()">
           <span id="geo-icon">📍</span>
@@ -701,14 +138,14 @@
       <ul id="address-list"></ul>
 
       <div class="action-grid">
-        <button id="sort-btn" onclick="optimizePointsOrder()">
-          🔃 Сортувати
-        </button>
+        <button id="sort-btn" onclick="optimizePointsOrder()">🔃 Сортувати</button>
         <button id="clear-btn" onclick="clearAllPoints()">🗑️ Очистити</button>
         <button id="map-btn" onclick="openMap()">🗺 Мапа</button>
       </div>
 
       <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
     </div>
-  </body>
+
+    <script src="script.js"></script>
+</body>
 </html>
