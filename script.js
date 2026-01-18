@@ -1034,9 +1034,9 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("Помилка читання localStorage:", e);
     }
 
-    if (cityObjects.length === 0) {
-      return alert("Спочатку додайте населені пункти через поле вище");
-    }
+    // if (cityObjects.length === 0) {
+    //   return alert("Спочатку додайте населені пункти через поле вище");
+    // }
 
     const cities = cityObjects.map((cityObj) => {
       const parts = cityObj.label.split(",").map((s) => s.trim());
