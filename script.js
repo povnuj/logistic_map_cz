@@ -320,59 +320,67 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function loadPointsFromStorage() {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const loadedPoints = JSON.parse(stored);
-
-        points = loadedPoints
-          .map((p) => {
-            if (p.lon !== undefined && p.lat !== undefined) {
-              return p;
-            }
-
-            if (
-              p.coords &&
-              p.coords.x !== undefined &&
-              p.coords.y !== undefined
-            ) {
-              console.log("🔄 Міграція старого формату:", p.label);
-              return {
-                lon: p.coords.x,
-                lat: p.coords.y,
-                label: p.label,
-              };
-            }
-
-            if (p.x !== undefined && p.y !== undefined) {
-              console.log("🔄 Міграція формату x/y:", p.label);
-              return {
-                lon: p.x,
-                lat: p.y,
-                label: p.label,
-              };
-            }
-
-            console.warn("⚠️ Невідомий формат точки:", p);
-            return null;
-          })
-          .filter((p) => p !== null);
-
-        console.log(`✅ Завантажено ${points.length} точок`);
-
-        savePointsToStorage();
-
-        renderList();
-        if (points.length >= 2) {
-          calculateRouteStats();
-        }
+function loadPointsFromStorage() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const loadedPoints = JSON.parse(stored);
+      points = loadedPoints
+        .map((p) => {
+          if (p.lon !== undefined && p.lat !== undefined) {
+            return {
+              lon: p.lon,
+              lat: p.lat,
+              label: p.label,
+              completed: p.completed || false,
+              duplicateCount: p.duplicateCount || undefined
+            };
+          }
+          
+          if (
+            p.coords &&
+            p.coords.x !== undefined &&
+            p.coords.y !== undefined
+          ) {
+            console.log("🔄 Міграція старого формату:", p.label);
+            return {
+              lon: p.coords.x,
+              lat: p.coords.y,
+              label: p.label,
+              completed: p.completed || false,
+              duplicateCount: p.duplicateCount || undefined
+            };
+          }
+          
+          if (p.x !== undefined && p.y !== undefined) {
+            console.log("🔄 Міграція формату x/y:", p.label);
+            return {
+              lon: p.x,
+              lat: p.y,
+              label: p.label,
+              completed: p.completed || false,
+              duplicateCount: p.duplicateCount || undefined
+            };
+          }
+          
+          console.warn("⚠️ Невідомий формат точки:", p);
+          return null;
+        })
+        .filter((p) => p !== null);
+      
+      console.log(`✅ Завантажено ${points.length} точок`);
+      savePointsToStorage();
+      renderList();
+      if (points.length >= 2) {
+        calculateRouteStats();
       }
-    } catch (e) {
-      console.error("❌ Помилка завантаження:", e);
-      points = [];
     }
+  } catch (e) {
+    console.error("❌ Помилка завантаження:", e);
+    points = [];
   }
+}
+
 
   function clearAllPoints() {
     if (points.length === 0) {
@@ -808,6 +816,7 @@ document.addEventListener("DOMContentLoaded", function () {
         lon: coords.lon,
         lat: coords.lat,
         label: finalLabel,
+        completed: false
       });
 
       console.log("✅ Точку додано до масиву:", {
@@ -831,47 +840,56 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function renderList() {
-    const list = document.getElementById("address-list");
-    list.innerHTML = "";
+function renderList() {
+  const list = document.getElementById("address-list");
+  list.innerHTML = "";
+  
+  points.forEach((p, i) => {
+    const parsed = parseAddress(p.label);
+    const li = document.createElement("li");
+    
+    // Додаємо клас completed якщо точка виконана
+    if (p.completed) {
+      li.classList.add("completed");
+    }
+    
+    let addressHTML = `
+      <div class="city-name">${parsed.city}</div>
+    `;
+    
+    if (parsed.address) {
+      addressHTML += `<div class="address-detail">${parsed.address}</div>`;
+    }
+    
+    // Показуємо лічильник повторень якщо є
+    let duplicateBadge = "";
+    if (p.duplicateCount && p.duplicateCount > 1) {
+      duplicateBadge = `<span class="duplicate-counter">${p.duplicateCount}x</span>`;
+      li.classList.add("duplicate");
+    }
+    
+    // Іконка змінюється залежно від стану
+    const navIcon = p.completed ? "✓" : "🧭";
+    
+    li.innerHTML = `
+      <div class="handle">☰</div>
+      <div class="badge">${i + 1}</div>
+      <div class="text">
+        ${addressHTML}
+      </div>
+      ${duplicateBadge}
+      <div class="nav-btn ${p.completed ? 'completed' : ''}" onclick="navigateToPoint(${i})" title="Навігація до цієї точки">${navIcon}</div>
+      <div class="del" onclick="removePoint(${i})">✕</div>
+    `;
+    
+    list.appendChild(li);
+  });
+  
+  document.getElementById("count").innerText = points.length;
+}
 
-    const duplicates = findDuplicates();
 
-    points.forEach((p, i) => {
-      const parsed = parseAddress(p.label);
-      const li = document.createElement("li");
 
-      if (duplicates.has(i)) {
-        li.classList.add("duplicate");
-      }
-
-      let addressHTML = `<div class="city-name">${parsed.city}</div>`;
-      if (parsed.address) {
-        addressHTML += `<div class="address-detail">${parsed.address}</div>`;
-      }
-
-      let duplicateBadge = "";
-      if (duplicates.has(i)) {
-        duplicateBadge = `<span class="duplicate-badge">ДУБЛІКАТ</span>`;
-      }
-      if (p.duplicateCount && p.duplicateCount > 1) {
-        duplicateBadge = `<span class="duplicate-counter">${p.duplicateCount}x</span>`;
-      }
-
-      li.innerHTML = `
-                <div class="handle">☰</div>
-                <div class="badge">${i + 1}</div>
-                <div class="text">
-                    ${addressHTML}
-                </div>
-                ${duplicateBadge}
-                <div class="del" onclick="removePoint(${i})">✕</div>
-            `;
-      list.appendChild(li);
-    });
-
-    document.getElementById("count").innerText = points.length;
-  }
 
   function removePoint(i) {
     const point = points[i];
@@ -1564,6 +1582,40 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("Запускаємо маршрут:", url);
     window.open(url, "_blank");
   }
+
+function navigateToPoint(index) {
+  if (index < 0 || index >= points.length) {
+    return alert("Некоректний індекс точки!");
+  }
+  
+  const point = points[index];
+  
+  // Перемикаємо стан completed
+  point.completed = !point.completed;
+  
+  console.log(`🧭 Точка ${index + 1}: ${point.completed ? 'виконана' : 'скасовано виконання'}`);
+  
+  // Зберігаємо зміни
+  savePointsToStorage();
+  renderList();
+  
+  // Якщо точка позначена як виконана - відкриваємо навігацію
+  if (point.completed) {
+    // Використовуємо навігаційний URL який відразу запускає навігатор
+    let url = `https://mapy.cz/zakladni?x=${point.lon}&y=${point.lat}&source=coor&id=${point.lon},${point.lat}&ds=1`;
+    console.log("🧭 Навігація до точки:", point.label);
+    window.open(url, "_blank");
+  }
+  
+  if (navigator.vibrate) navigator.vibrate(50);
+}
+
+
+
+
+// Додайте цю функцію до window об'єкту в init()
+window.navigateToPoint = navigateToPoint;
+
 
   function init() {
     if (API_KEY === "YOUR_API_KEY_HERE") {
