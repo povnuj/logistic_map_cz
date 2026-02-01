@@ -14,6 +14,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const API_KEY = "0aIyQ0ASZ3AcgUp5tFkCHMkCFihUJ25iO46sBTuE0Ps";
 
+  function getLocalIndex(i, size = 17) {
+    if (i === 0) return 1; // Перша точка завжди 1
+    const localIdx = (i % 16) + 1; // 16 бо 1 точка перетинається
+    return localIdx === 1 ? 17 : localIdx; // 1→17, 2→2, 3→3 ... 16→16, 17→17
+  }
+
   // ✅ Geocoding з REST API
   async function geocodeAddress(query) {
     try {
@@ -873,7 +879,10 @@ function renderList() {
     
     li.innerHTML = `
       <div class="handle">☰</div>
-      <div class="badge">${i + 1}</div>
+      <div class="badge">
+        <div class="badge-main">${i + 1}</div>
+        <div class="badge-sub">${getLocalIndex(i)}</div>
+      </div>
       <div class="text">
         ${addressHTML}
       </div>
@@ -957,7 +966,7 @@ function renderList() {
     const markers = [];
     points.forEach((p, i) => {
       const marker = L.marker([p.lat, p.lon])
-        .bindPopup(`<b>${i + 1}. ${p.label}</b>`)
+        .bindPopup(`<b>${i + 1} (${getLocalIndex(i)})</b> ${p.label}`)
         .addTo(map);
       markers.push(marker);
     });
