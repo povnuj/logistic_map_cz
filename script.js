@@ -14,6 +14,337 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const API_KEY = "0aIyQ0ASZ3AcgUp5tFkCHMkCFihUJ25iO46sBTuE0Ps";
 
+
+// ✅ Функція для розрахунку та сортування відстаней по населених пунктах
+async function calculateDistancesToFirst10() {
+    if (points.length < 2) {
+        alert("Потрібно мінімум 2 точки для розрахунку відстаней");
+        return;
+    }
+
+    // ✅ ПОКАЗУЄМО МОДАЛКУ ПРОГРЕСУ
+    showProgressModal();
+
+    console.log("=".repeat(80));
+    console.log("📏 РОЗРАХУНОК ВІДСТАНЕЙ ПО НАСЕЛЕНИХ ПУНКТАХ");
+    console.log("=".repeat(80));
+
+    // Групуємо точки за населеними пунктами
+    const cityGroups = {};
+    points.forEach((p, index) => {
+        const parts = p.label.split(",").map(s => s.trim());
+        let city = null;
+        
+        if (parts.length >= 2) {
+            city = parts[1];
+        } else if (parts.length === 1) {
+            city = parts[0];
+        }
+        
+        if (city) {
+            if (!cityGroups[city]) {
+                cityGroups[city] = [];
+            }
+            cityGroups[city].push({ point: p, originalIndex: index });
+        }
+    });
+
+    const cityNames = Object.keys(cityGroups);
+    console.log(`\n📍 Знайдено ${cityNames.length} населених пунктів:`);
+    cityNames.forEach((city, i) => {
+        console.log(`   ${i + 1}. ${city} (${cityGroups[city].length} точок)`);
+    });
+
+    // Підраховуємо загальну кількість точок
+    let totalPointsCount = 0;
+    cityNames.forEach(city => {
+        totalPointsCount += cityGroups[city].length;
+    });
+
+    updateProgressModal(`Знайдено ${cityNames.length} НП з ${totalPointsCount} точками`);
+
+    const startPoint = points[0];
+    console.log(`\n🚩 Стартова точка: ${startPoint.label}`);
+
+    let lastPoint = startPoint;
+    const sortedResults = [];
+    let processedCount = 0;
+
+    // Обробляємо кожен населений пункт
+    for (let cityIndex = 0; cityIndex < cityNames.length; cityIndex++) {
+        const cityName = cityNames[cityIndex];
+        const cityPoints = cityGroups[cityName];
+
+        updateProgressModal(`НП ${cityIndex + 1}/${cityNames.length}: ${cityName}`, processedCount, totalPointsCount);
+
+        console.log("\n" + "─".repeat(80));
+        console.log(`📌 НАСЕЛЕНИЙ ПУНКТ: ${cityName}`);
+        console.log(`   Точок у цьому НП: ${cityPoints.length}`);
+        
+        if (cityIndex === 0) {
+            console.log(`   Відстань міряємо від: ТОЧКА #1 (${lastPoint.label})`);
+        } else {
+            console.log(`   Відстань міряємо від: останньої точки попереднього НП`);
+            console.log(`   (${lastPoint.label})`);
+        }
+
+        const distances = [];
+        
+        for (let i = 0; i < cityPoints.length; i++) {
+            const targetPointData = cityPoints[i];
+            const targetPoint = targetPointData.point;
+            
+            processedCount++;
+            updateProgressModal(
+                `НП ${cityIndex + 1}/${cityNames.length}: ${cityName}`,
+                processedCount,
+                totalPointsCount,
+                `Обробка: ${targetPoint.label.substring(0, 50)}...`
+            );
+            
+            try {
+                const coords = [
+                    { lon: lastPoint.lon, lat: lastPoint.lat },
+                    { lon: targetPoint.lon, lat: targetPoint.lat }
+                ];
+                
+                const route = await calculateRoute(coords, false);
+                
+                if (route && route.distance) {
+                    const distanceKm = route.distance / 1000;
+                    const timeMin = Math.round(route.time / 60);
+                    
+                    distances.push({
+                        pointData: targetPointData,
+                        point: targetPoint,
+                        distance: distanceKm,
+                        time: timeMin,
+                        originalIndex: targetPointData.originalIndex
+                    });
+                } else {
+                    console.warn(`   ⚠️ Не вдалося розрахувати для: ${targetPoint.label}`);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+            } catch (error) {
+                console.error(`   ❌ Помилка для точки: ${targetPoint.label}`, error);
+            }
+        }
+
+        distances.sort((a, b) => a.distance - b.distance);
+
+        console.log(`\n   ✅ Посортовано від найближчої до найдальшої:`);
+        console.log("");
+        
+        distances.forEach((item, idx) => {
+            console.log(`   ${idx + 1}. [Точка #${item.originalIndex + 1}] ${item.point.label}`);
+            console.log(`      💠 ${item.distance.toFixed(2)} км (≈ ${item.time} хв)`);
+        });
+
+        sortedResults.push({
+            city: cityName,
+            points: distances
+        });
+
+        if (distances.length > 0) {
+            lastPoint = distances[distances.length - 1].point;
+            console.log(`\n   🏁 Остання точка цього НП: ${lastPoint.label}`);
+        }
+    }
+
+    // Фінальний звіт
+    console.log("\n" + "=".repeat(80));
+    console.log("✅ РОЗРАХУНОК ЗАВЕРШЕНО");
+    console.log("=".repeat(80));
+    
+    let totalPoints = 0;
+    sortedResults.forEach(cityResult => {
+        totalPoints += cityResult.points.length;
+    });
+    
+    console.log(`\nОброблено: ${cityNames.length} НП, ${totalPoints} точок`);
+    console.log("\n📋 ПІДСУМОК СОРТУВАННЯ:");
+    
+    sortedResults.forEach((cityResult, idx) => {
+        console.log(`\n${idx + 1}. ${cityResult.city}:`);
+        cityResult.points.forEach((item, pointIdx) => {
+            console.log(`   ${pointIdx + 1}. Точка #${item.originalIndex + 1} - ${item.distance.toFixed(2)} км`);
+        });
+    });
+    
+    console.log("\n" + "=".repeat(80));
+
+    // Зберігаємо результати
+    updateProgressModal("Зберігаємо результати...", totalPointsCount, totalPointsCount);
+
+    console.log("\n💾 ЗБЕРІГАЄМО В LOCALSTORAGE:");
+    console.log("=".repeat(80));
+    
+    const sortedArray = [];
+    
+    sortedArray.push({
+        lon: startPoint.lon,
+        lat: startPoint.lat,
+        label: startPoint.label,
+        completed: startPoint.completed || false
+    });
+    
+    console.log(`1. ${startPoint.label} (стартова точка)`);
+    
+    let position = 2;
+    sortedResults.forEach(cityResult => {
+        cityResult.points.forEach(item => {
+            sortedArray.push({
+                lon: item.point.lon,
+                lat: item.point.lat,
+                label: item.point.label,
+                completed: item.point.completed || false
+            });
+            console.log(`${position}. ${item.point.label}`);
+            position++;
+        });
+    });
+
+    console.log("\n=".repeat(80));
+    console.log(`✅ Масив містить ${sortedArray.length} точок`);
+    
+    points.length = 0;
+    points.push(...sortedArray);
+    
+    savePointsToStorage();
+    renderList();
+    
+    if (points.length >= 2) {
+        calculateRouteStats();
+    }
+    
+    console.log("💾 Збережено в localStorage");
+    console.log("🔄 UI оновлено");
+    console.log("=".repeat(80));
+    
+    // ✅ ЗАКРИВАЄМО МОДАЛКУ
+    hideProgressModal();
+    
+    alert(`✅ Готово!\n\nОброблено: ${totalPoints} точок\nНП: ${cityNames.length}\n\nТочки відсортовано та збережено!`);
+}
+
+// ✅ ФУНКЦІЇ ДЛЯ МОДАЛКИ ПРОГРЕСУ
+function showProgressModal() {
+    // Перевіряємо чи модалка вже існує
+    let modal = document.getElementById('progress-modal');
+    if (!modal) {
+        // Створюємо модалку
+        modal = document.createElement('div');
+        modal.id = 'progress-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+        
+        modal.innerHTML = `
+            <div style="
+                background: white;
+                border-radius: 15px;
+                padding: 30px;
+                max-width: 500px;
+                width: 90%;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            ">
+                <h2 style="margin: 0 0 20px 0; color: #333; font-size: 20px;">
+                    📏 Розрахунок відстаней
+                </h2>
+                <div id="progress-message" style="
+                    color: #666;
+                    margin-bottom: 15px;
+                    font-size: 14px;
+                ">
+                    Ініціалізація...
+                </div>
+                <div style="
+                    background: #f0f0f0;
+                    height: 30px;
+                    border-radius: 15px;
+                    overflow: hidden;
+                    margin-bottom: 10px;
+                ">
+                    <div id="progress-bar" style="
+                        background: linear-gradient(90deg, #4CAF50, #8BC34A);
+                        height: 100%;
+                        width: 0%;
+                        transition: width 0.3s ease;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        font-size: 12px;
+                    ">
+                        0%
+                    </div>
+                </div>
+                <div id="progress-detail" style="
+                    color: #999;
+                    font-size: 12px;
+                    text-align: center;
+                ">
+                    Зачекайте...
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
+}
+
+function updateProgressModal(message, current = 0, total = 100, detail = '') {
+    const modal = document.getElementById('progress-modal');
+    if (!modal) return;
+    
+    const messageEl = document.getElementById('progress-message');
+    const progressBar = document.getElementById('progress-bar');
+    const detailEl = document.getElementById('progress-detail');
+    
+    if (messageEl) messageEl.textContent = message;
+    
+    if (progressBar && total > 0) {
+        const percent = Math.round((current / total) * 100);
+        progressBar.style.width = percent + '%';
+        progressBar.textContent = percent + '%';
+    }
+    
+    if (detailEl) {
+        if (detail) {
+            detailEl.textContent = detail;
+        } else {
+            detailEl.textContent = `${current} / ${total}`;
+        }
+    }
+}
+
+function hideProgressModal() {
+    const modal = document.getElementById('progress-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// ✅ Експортуємо функції в window
+window.calculateDistancesToFirst10 = calculateDistancesToFirst10;
+window.showProgressModal = showProgressModal;
+window.updateProgressModal = updateProgressModal;
+window.hideProgressModal = hideProgressModal;
+
+
   function getLocalIndex(i, size = 17) {
     if (i === 0) return 1; // Перша точка завжди 1
     const localIdx = (i % 16) + 1; // 16 бо 1 точка перетинається
@@ -894,7 +1225,7 @@ function renderList() {
     list.appendChild(li);
   });
   
-  document.getElementById("count").innerText = points.length;
+  document.getElementById("count").innerText = points.length - 1;
 }
 
 
@@ -1687,6 +2018,7 @@ window.navigateToPoint = navigateToPoint;
   window.applyCityOrder = applyCityOrder;
   window.openCityOrderModal = openCityOrderModal;
   window.clearAddressInput = clearAddressInput;
+  window.calculateDistancesToFirst10 = calculateDistancesToFirst10;
 
   init();
 });

@@ -79,11 +79,10 @@
 
       <div class="action-grid">
         <button id="sort-btn" onclick="optimizePointsOrder()">🔃 Сортувати</button>
-                    <button id="np-btn" onclick="openCityOrderModal()">
-                🏙️ НП
-            </button>
-            <button id="clear-btn" onclick="clearAllPoints()">🗑️ Очистити</button>
-        <button id="map-btn" onclick="openMap()">🗺 Мапа</button>
+        <button class="sort-city-btn" onclick="calculateDistancesToFirst10()">📏 Оптимізувати</button>
+        <button id="np-btn" onclick="openCityOrderModal()">🏙️ НП</button>
+        <button id="clear-btn" onclick="clearAllPoints()">🗑️ Очистити</button>
+        <!-- <button id="map-btn" onclick="openMap()">🗺 Мапа</button> -->
       </div>
 
       <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
