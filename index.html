@@ -4,21 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Povnuj MapCZ</title>
-    
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+
     <!-- SortableJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <link rel="stylesheet" href="style.css">
+
 
 </head>
 <body>
     <div id="map-container"></div>
     <div id="close-map-btn" onclick="closeMap()"><span>✕</span> Закрити карту</div>
+
 
     <div id="chunks-modal">
       <div id="chunks-content">
@@ -31,11 +33,12 @@
       </div>
     </div>
 
+
     <div id="city-order-modal">
       <div id="city-order-content">
         <h3>🏙️ Порядок населених пунктів</h3>
         <p style="color: #666; font-size: 14px; margin: 0 0 15px 0;">Перетягніть міста для зміни порядку маршруту</p>
-        
+
             <div class="input-wrapper" style="margin: 10px 0 15px 0;">
                 <input type="text" id="city-order-input" placeholder="Додати НП..." autocomplete="off" />
                 <div id="city-order-autocomplete" class="autocomplete-dropdown"></div>
@@ -48,34 +51,43 @@
       </div>
     </div>
 
+
     <div id="main-view">
       <div class="header">
         <div class="header-title-group">
           <h2>Мій маршрут</h2>
           <span class="count-badge" id="count">0</span>
         </div>
+        <button id="collapse-btn" onclick="toggleHeaderCollapse()" title="Згорнути/Розгорнути">
+          <span id="collapse-icon">▲</span>
+        </button>
         <div id="header-stats">
           <div class="stat-time" id="stat-time">--:--</div>
           <div class="stat-dist" id="stat-dist">-- км</div>
         </div>
       </div>
 
-      <div class="input-row">
-        <div class="input-wrapper">
-          <input type="text" id="address-input" placeholder="Введіть адресу..." autocomplete="off" />
-          <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+
+      <div id="collapsible-section">
+        <div class="input-row">
+          <div class="input-wrapper">
+            <input type="text" id="address-input" placeholder="Введіть адресу..." autocomplete="off" />
+            <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+          </div>
+          <button id="geo-btn" onclick="addCurrentLocation()">
+            <span id="geo-icon">📍</span>
+            <div id="geo-spinner" class="spinner"></div>
+          </button>
         </div>
-        <button id="geo-btn" onclick="addCurrentLocation()">
-          <span id="geo-icon">📍</span>
-          <div id="geo-spinner" class="spinner"></div>
-        </button>
-      </div>
-      <div class="city-order-add-btn-container">
-        <button id="clear-input-btn" onclick="clearAddressInput()">🗑️ Очистити поле</button>
-        <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
+        <div class="city-order-add-btn-container">
+          <button id="clear-input-btn" onclick="clearAddressInput()">🗑️ Очистити поле</button>
+          <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
+        </div>
       </div>
 
+
       <ul id="address-list"></ul>
+
 
       <div class="action-grid">
         <button id="sort-btn" onclick="optimizePointsOrder()">🔃 Сортувати</button>
@@ -85,8 +97,10 @@
         <!-- <button id="map-btn" onclick="openMap()">🗺 Мапа</button> -->
       </div>
 
+
       <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
     </div>
+
 
     <script src="script.js"></script>
 </body>

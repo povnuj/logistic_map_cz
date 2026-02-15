@@ -15,6 +15,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const API_KEY = "0aIyQ0ASZ3AcgUp5tFkCHMkCFihUJ25iO46sBTuE0Ps";
 
 
+  
+
 // ✅ Функція для розрахунку та сортування відстаней по населених пунктах
 async function calculateDistancesToFirst10() {
     if (points.length < 2) {
@@ -2021,4 +2023,36 @@ window.navigateToPoint = navigateToPoint;
   window.calculateDistancesToFirst10 = calculateDistancesToFirst10;
 
   init();
+});
+
+// Функція для згортання/розгортання хедера
+function toggleHeaderCollapse() {
+    const collapsibleSection = document.getElementById('collapsible-section');
+    const goBtn = document.getElementById('nav-btn');
+    const actionElement = document.querySelector('.action-grid');
+    const collapseIcon = document.getElementById('collapse-icon');
+    const isCollapsed = collapsibleSection.style.display === 'none';
+
+    if (isCollapsed) {
+        collapsibleSection.style.display = 'block';
+        actionElement.style.display = 'grid';
+        goBtn.style.display = 'block';
+        collapseIcon.textContent = '▲';
+        localStorage.setItem('headerCollapsed', 'false');
+    } else {
+        collapsibleSection.style.display = 'none';
+        actionElement.style.display = 'none';
+        goBtn.style.display = 'none';
+        collapseIcon.textContent = '▼';
+        localStorage.setItem('headerCollapsed', 'true');
+    }
+}
+
+// Відновлення стану при завантаженні сторінки
+document.addEventListener('DOMContentLoaded', function() {
+    const isCollapsed = localStorage.getItem('headerCollapsed') === 'true';
+    if (isCollapsed) {
+        document.getElementById('collapsible-section').style.display = 'none';
+        document.getElementById('collapse-icon').textContent = '▼';
+    }
 });
