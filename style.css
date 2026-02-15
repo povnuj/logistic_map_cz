@@ -361,12 +361,13 @@ button:active {
 }
 
 #address-list li.completed .city-name {
-  color: #27ae60;
+  color: #000;
 }
 
 #address-list li.completed .address-detail {
-  color: #4caf50;
-  text-decoration: line-through;
+  color: #000;
+  font-size: 14px;
+  /* text-decoration: line-through; */
   opacity: 0.7;
 }
 
