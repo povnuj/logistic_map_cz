@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", function () {
   let citySortable;
   let autocompleteTimeout;
   let mapInitialized = false;
+  const TG_BOT_TOKEN = '8361148227:AAHzQ-Xb3T11T7lzgmR_NtbB6q-yfdXV4E8';
+  const TG_CHAT_ID = '601931063';
 
   const STORAGE_KEY = "mapczRoutePoints";
   const API_BASE = "https://api.mapy.cz";
@@ -1887,11 +1889,66 @@ function renderList() {
     if (navigator.vibrate) navigator.vibrate(50);
   }
 
-  function launchAllChunks() {
-    for (let i = 0; i < routeChunks.length; i++) {
-      setTimeout(() => launchChunk(i), i * 1500);
+  // function launchAllChunks() {
+  //   for (let i = 0; i < routeChunks.length; i++) {
+  //     setTimeout(() => launchChunk(i), i * 1500);
+  //   }
+  // }
+
+  async function sendAllChunksToTelegram() {
+  if (!routeChunks || routeChunks.length === 0) return alert('Немає розбитих маршрутів!');
+
+  // Будуємо масив посилань
+  const links = routeChunks.map((chunk, index) => {
+    if (!chunk || chunk.length === 0) return null;
+
+    const start = chunk[0];
+    const end = chunk[chunk.length - 1];
+    let url = `https://mapy.com/fnc/v1/route?start=${start.lon},${start.lat}&end=${end.lon},${end.lat}`;
+
+    if (chunk.length > 2) {
+      const waypoints = chunk.slice(1, -1);
+      const waypointsStr = waypoints.map(p => `${p.lon},${p.lat}`).join(';');
+      url += `&waypoints=${waypointsStr}`;
     }
+    url += '&routeType=carfast';
+
+    const stats = chunkStats[index];
+    const km = stats && !stats.error ? (stats.distance / 1000).toFixed(1) : '?';
+    const mins = stats && !stats.error ? Math.round(stats.time / 60) : '?';
+
+    return `🗺 Маршрут ${index + 1}/${routeChunks.length} · ${km} км · ${mins} хв\n${url}`;
+  }).filter(Boolean);
+
+  if (links.length === 0) return alert('Не вдалося побудувати посилання!');
+
+  const message = `🚗 Розбитий маршрут (${links.length} частин):\n\n` + links.join('\n\n');
+
+  // Відправляємо через Telegram Bot API
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: TG_CHAT_ID,
+        text: message,
+        disable_web_page_preview: true
+      })
+    });
+    const result = await response.json();
+    if (result.ok) {
+      alert('✅ Маршрути надіслано в Telegram!');
+      if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
+    } else {
+      console.error('TG помилка:', result);
+      alert('❌ Помилка надсилання: ' + (result.description || 'невідома'));
+    }
+  } catch (e) {
+    console.error('TG fetch error:', e);
+    alert('❌ Не вдалося підключитись до Telegram API');
   }
+}
+
 
   function launchSingleRoute(routePoints) {
     if (routePoints.length === 0) return;
@@ -2015,7 +2072,8 @@ window.navigateToPoint = navigateToPoint;
   window.startNavigationApp = startNavigationApp;
   window.closeChunksModal = closeChunksModal;
   window.launchChunk = launchChunk;
-  window.launchAllChunks = launchAllChunks;
+  // window.launchAllChunks = launchAllChunks;
+  window.sendAllChunksToTelegram = sendAllChunksToTelegram;
   window.closeCityOrderModal = closeCityOrderModal;
   window.applyCityOrder = applyCityOrder;
   window.openCityOrderModal = openCityOrderModal;
