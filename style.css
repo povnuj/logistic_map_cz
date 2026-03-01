@@ -843,3 +843,77 @@ button:active {
     display: flex;
     gap: 10px;
 }
+.comment-btn {
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+
+.comment-btn.has-comment {
+  filter: hue-rotate(90deg) saturate(3); /* робить іконку зеленою */
+  color: #28a745;
+}
+
+#comment-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+}
+
+.modal-box {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  width: 90%;
+  max-width: 400px;
+  z-index: 1;
+}
+
+.modal-box h3 {
+  margin: 0 0 12px;
+  font-size: 0.95em;
+  color: #333;
+}
+
+.modal-box textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 1em;
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+.modal-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  background: #007bff;
+  color: white;
+}
+
+.modal-actions button:last-child {
+  background: #6c757d;
+}
