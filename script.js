@@ -1268,32 +1268,40 @@ function renderList() {
 
 
 
-  function removePoint(i) {
-    const point = points[i];
+function removePoint(i) {
+  const point = points[i];
 
-    // Якщо є лічильник дублікатів - зменшуємо його
-    if (point.duplicateCount && point.duplicateCount > 1) {
-      point.duplicateCount--;
-      console.log(`🔻 Лічильник зменшено до: ${point.duplicateCount}x`);
-
-      renderList();
-      savePointsToStorage();
-      return; // НЕ видаляємо точку, тільки зменшуємо лічильник
-    }
-
-    // Якщо лічильника немає або він дорівнює 1 - видаляємо точку
-    points.splice(i, 1);
-    console.log(`🗑️ Точку видалено (індекс ${i})`);
+  // Якщо є лічильник дублікатів - зменшуємо його (без підтвердження)
+  if (point.duplicateCount && point.duplicateCount > 1) {
+    point.duplicateCount--;
+    console.log(`🔻 Лічильник зменшено до: ${point.duplicateCount}x`);
 
     renderList();
     savePointsToStorage();
-
-    if (points.length >= 2) {
-      calculateRouteStats();
-    } else {
-      document.getElementById("header-stats").style.display = "none";
-    }
+    return; // НЕ видаляємо точку, тільки зменшуємо лічильник
   }
+
+  // ✅ Промпт перед видаленням точки
+  const confirmed = confirm(`Видалити точку "${point.name || `#${i + 1}`}"?`);
+  if (!confirmed) {
+    console.log(`❌ Видалення скасовано (індекс ${i})`);
+    return;
+  }
+
+  // Якщо лічильника немає або він дорівнює 1 - видаляємо точку
+  points.splice(i, 1);
+  console.log(`🗑️ Точку видалено (індекс ${i})`);
+
+  renderList();
+  savePointsToStorage();
+
+  if (points.length >= 2) {
+    calculateRouteStats();
+  } else {
+    document.getElementById("header-stats").style.display = "none";
+  }
+}
+
 
   function initMap() {
     map = L.map("map-container").setView([49.8, 15.4], 7);
