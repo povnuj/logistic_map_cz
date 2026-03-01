@@ -1222,27 +1222,22 @@ function renderList() {
     const parsed = parseAddress(p.label);
     const li = document.createElement("li");
     
-    // Додаємо клас completed якщо точка виконана
     if (p.completed) {
       li.classList.add("completed");
     }
     
-    let addressHTML = `
-      <div class="city-name">${parsed.city}</div>
-    `;
+    let addressHTML = `<div class="city-name">${parsed.city}</div>`;
     
     if (parsed.address) {
       addressHTML += `<div class="address-detail">${parsed.address}</div>`;
     }
     
-    // Показуємо лічильник повторень якщо є
     let duplicateBadge = "";
     if (p.duplicateCount && p.duplicateCount > 1) {
       duplicateBadge = `<span class="duplicate-counter">${p.duplicateCount}x</span>`;
       li.classList.add("duplicate");
     }
     
-    // Іконка змінюється залежно від стану
     const navIcon = p.completed ? "✓" : "🧭";
     
     li.innerHTML = `
@@ -1251,19 +1246,110 @@ function renderList() {
         <div class="badge-main">${i + 1}</div>
         <div class="badge-sub">${getLocalIndex(i)}</div>
       </div>
-      <div class="text">
-        ${addressHTML}
-      </div>
+      <div class="text">${addressHTML}</div>
       ${duplicateBadge}
+      <div class="comment-btn" id="comment-btn-${i}" onclick="openCommentModal(${i})" title="Коментар">📦</div>
       <div class="nav-btn ${p.completed ? 'completed' : ''}" onclick="navigateToPoint(${i})" title="Навігація до цієї точки">${navIcon}</div>
       <div class="del" onclick="removePoint(${i})">✕</div>
     `;
     
     list.appendChild(li);
+    
+    // Перевіряємо наявність запису в Firebase
+    checkFirebaseComment(i, parsed);
   });
   
   document.getElementById("count").innerText = points.length - 1;
 }
+
+
+function getFirebaseKeys(parsed) {
+  if (!parsed.address) return null;
+
+  const addressMatch = parsed.address.match(/^(.+?)\s+(\S+)$/);
+  if (!addressMatch) return null;
+
+  const street = addressMatch[1]
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, '-');
+
+  const house = addressMatch[2];
+
+  const cityKey = parsed.city
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, '-');
+
+  if (!street || !house || !cityKey) return null;
+
+  return { street, house, cityKey };
+}
+
+function checkFirebaseComment(index, parsed) {
+  const keys = getFirebaseKeys(parsed);
+  if (!keys) return;
+
+  const url = `https://mapy-cz-be68d-default-rtdb.firebaseio.com/city/${keys.cityKey}/${keys.street}/${keys.house}.json`;
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      const btn = document.getElementById(`comment-btn-${index}`);
+      if (btn && data !== null) btn.classList.add("has-comment");
+    })
+    .catch(() => {});
+}
+
+function openCommentModal(index) {
+  const parsed = parseAddress(points[index].label);
+  const keys = getFirebaseKeys(parsed);
+  if (!keys) return;
+
+  const url = `https://mapy-cz-be68d-default-rtdb.firebaseio.com/city/${keys.cityKey}/${keys.street}/${keys.house}.json`;
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      const existing = (data && data.comment) ? data.comment : "";
+
+      const modal = document.createElement("div");
+      modal.id = "comment-modal";
+      modal.innerHTML = `
+        <div class="modal-overlay" onclick="closeCommentModal()"></div>
+        <div class="modal-box">
+          <h3>💬 ${parsed.city}, ${parsed.address}</h3>
+          <textarea id="comment-textarea" rows="6" placeholder="Введіть коментар...">${existing}</textarea>
+          <div class="modal-actions">
+            <button onclick="saveComment(${index}, '${keys.cityKey}', '${keys.street}', '${keys.house}')">💾 Зберегти</button>
+            <button onclick="closeCommentModal()">✕ Закрити</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    });
+}
+
+function closeCommentModal() {
+  const modal = document.getElementById("comment-modal");
+  if (modal) modal.remove();
+}
+
+function saveComment(index, cityKey, street, house) {
+  const text = document.getElementById("comment-textarea").value;
+  const url = `https://mapy-cz-be68d-default-rtdb.firebaseio.com/city/${cityKey}/${street}/${house}.json`;
+
+  fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ comment: text })
+  }).then(() => {
+    const btn = document.getElementById(`comment-btn-${index}`);
+    if (btn) btn.classList.toggle("has-comment", text.trim() !== "");
+    closeCommentModal();
+  });
+}
+
 
 
 
@@ -2120,6 +2206,9 @@ window.navigateToPoint = navigateToPoint;
   window.openCityOrderModal = openCityOrderModal;
   window.clearAddressInput = clearAddressInput;
   window.calculateDistancesToFirst10 = calculateDistancesToFirst10;
+  window.openCommentModal = openCommentModal;
+  window.closeCommentModal = closeCommentModal;
+  window.saveComment = saveComment;
 
 
   const token = localStorage.getItem('mapyCzToken');
