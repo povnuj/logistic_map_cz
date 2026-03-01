@@ -315,8 +315,8 @@ button:active {
 /* ========== LIST ========== */
 .nav-btn {
   cursor: pointer;
-  padding: 5px 10px;
-  font-size: 18px;
+  padding: 5px;
+  font-size: 15px;
   transition: transform 0.2s;
   flex-shrink: 0;
 }
@@ -329,7 +329,7 @@ button:active {
   transform: scale(0.95);
 }
 /* Стилі для кнопки навігації */
-.nav-btn {
+/* .nav-btn {
   cursor: pointer;
   padding: 5px 10px;
   font-size: 18px;
@@ -337,16 +337,16 @@ button:active {
   flex-shrink: 0;
   user-select: none;
   border-radius: 5px;
-}
+} */
 
-.nav-btn:hover {
+/* .nav-btn:hover {
   transform: scale(1.2);
   background-color: rgba(46, 204, 113, 0.1);
 }
 
 .nav-btn:active {
   transform: scale(0.95);
-}
+} */
 
 .nav-btn.completed {
   color: #27ae60;
@@ -493,10 +493,11 @@ button:active {
 
 .del {
     color: #e74c3c;
-    padding: 8px;
-    font-size: 20px;
+    padding: 5px;
+    font-size: 15px;
     cursor: pointer;
-    align-self: flex-start;
+    /* align-self: flex-start; */
+     flex-shrink: 0;
 }
 
 /* ========== AUTOCOMPLETE ========== */
@@ -837,4 +838,8 @@ button:active {
         font-size: 12px;
         /* right: 5px; */
     }
+}
+.heder_right{
+    display: flex;
+    gap: 10px;
 }
