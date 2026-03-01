@@ -1266,13 +1266,21 @@ function renderList() {
 function getFirebaseKeys(parsed) {
   if (!parsed.address) return null;
 
-  const addressMatch = parsed.address.match(/^(.+?)\s+(\S+)$/);
+  // Видаляємо PSČ (252 06) з адреси якщо є
+  const addressClean = parsed.address.replace(/,\s*\d{3}\s?\d{2}$/, "").trim();
+
+  // Розбиваємо: все до останнього числового токена = вулиця, останній токен = будинок
+  // Підтримує: "M. J. Hurta 137", "Třebenice 1", "Nová ulice 12a"
+  const addressMatch = addressClean.match(/^(.+?)\s+(\d+\S*)$/);
   if (!addressMatch) return null;
 
   const street = addressMatch[1]
     .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, '-');
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // č→c, š→s, ě→e...
+    .replace(/\./g, "")                                // M. J. → m j
+    .replace(/\s+/g, '-')                              // пробіли → дефіс
+    .replace(/-+/g, '-')                               // подвійні дефіси → один
+    .replace(/^-|-$/g, '');                            // прибираємо дефіси на краях
 
   const house = addressMatch[2];
 
