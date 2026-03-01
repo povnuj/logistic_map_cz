@@ -14,7 +14,40 @@ document.addEventListener("DOMContentLoaded", function () {
   const STORAGE_KEY = "mapczRoutePoints";
   const API_BASE = "https://api.mapy.cz";
 
-  const API_KEY = "0aIyQ0ASZ3AcgUp5tFkCHMkCFihUJ25iO46sBTuE0Ps";
+  let API_KEY = '';//"0aIyQ0ASZ3AcgUp5tFkCHMkCFihUJ25iO46sBTuE0Ps";
+
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsModal = document.getElementById('settingsModal');
+  const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+  const settingsCancelBtn = document.getElementById('settingsCancelBtn');
+  const mapyTokenInput = document.getElementById('mapyTokenInput');
+
+  // Відкрити модалку
+  settingsBtn.addEventListener('click', () => {
+    mapyTokenInput.value = localStorage.getItem('mapyCzToken') || '';
+    settingsModal.style.display = 'flex';
+  });
+
+  // Зберегти токен
+  settingsSaveBtn.addEventListener('click', () => {
+    const token = mapyTokenInput.value.trim();
+    if (token) {
+      localStorage.setItem('mapyCzToken', token);
+    } else {
+      localStorage.removeItem('mapyCzToken');
+    }
+    settingsModal.style.display = 'none';
+  });
+
+  // Закрити без збереження
+  settingsCancelBtn.addEventListener('click', () => {
+    settingsModal.style.display = 'none';
+  });
+
+  // Закрити по кліку на фон
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) settingsModal.style.display = 'none';
+  });
 
 
   
@@ -2080,7 +2113,16 @@ window.navigateToPoint = navigateToPoint;
   window.clearAddressInput = clearAddressInput;
   window.calculateDistancesToFirst10 = calculateDistancesToFirst10;
 
-  init();
+
+  const token = localStorage.getItem('mapyCzToken');
+    console.log("token",token);
+    if(token) {
+        API_KEY = token !== 'test'? token : "0aIyQ0ASZ3AcgUp5tFkCHMkCFihUJ25iO46sBTuE0Ps";
+        init();
+    }
+        console.log("API_KEY",API_KEY);
+
+  
 });
 
 // Функція для згортання/розгортання хедера

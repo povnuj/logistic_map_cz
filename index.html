@@ -1,107 +1,134 @@
 <!DOCTYPE html>
 <html lang="uk">
+
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Povnuj MapCZ</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Povnuj MapCZ</title>
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- SortableJS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+  <!-- SortableJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <link rel="stylesheet" href="style.css">
 
 
 </head>
+
 <body>
-    <div id="map-container"></div>
-    <div id="close-map-btn" onclick="closeMap()"><span>✕</span> Закрити карту</div>
+  <div id="map-container"></div>
+  <div id="close-map-btn" onclick="closeMap()"><span>✕</span> Закрити карту</div>
 
 
-    <div id="chunks-modal">
-      <div id="chunks-content">
-        <h3>🗺️ Розбиття маршруту</h3>
-        <div id="chunks-list"></div>
-        <div class="modal-actions">
-          <button class="modal-btn modal-btn-primary" onclick="sendAllChunksToTelegram()">🚀 в ТГ</button>
-          <button class="modal-btn modal-btn-secondary" onclick="closeChunksModal()">Закрити</button>
-        </div>
+  <div id="chunks-modal">
+    <div id="chunks-content">
+      <h3>🗺️ Розбиття маршруту</h3>
+      <div id="chunks-list"></div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-primary" onclick="sendAllChunksToTelegram()">🚀 в ТГ</button>
+        <button class="modal-btn modal-btn-secondary" onclick="closeChunksModal()">Закрити</button>
       </div>
     </div>
+  </div>
 
-
-    <div id="city-order-modal">
-      <div id="city-order-content">
-        <h3>🏙️ Порядок населених пунктів</h3>
-        <p style="color: #666; font-size: 14px; margin: 0 0 15px 0;">Перетягніть міста для зміни порядку маршруту</p>
-
-            <div class="input-wrapper" style="margin: 10px 0 15px 0;">
-                <input type="text" id="city-order-input" placeholder="Додати НП..." autocomplete="off" />
-                <div id="city-order-autocomplete" class="autocomplete-dropdown"></div>
-                <button class="modal-btn modal-btn-primary" onclick="saveCityToStorage()" style="margin-left: 10px;">ОК</button>
-            </div>
-            <div id="city-order-list"></div>
-        <div class="modal-actions">
-          <button class="modal-btn modal-btn-secondary" onclick="closeCityOrderModal()">Скасувати</button>
-        </div>
+  <!-- Settings Modal -->
+  <div id="settingsModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div
+      style="background:#fff; border-radius:12px; padding:24px; min-width:320px; box-shadow:0 4px 24px rgba(0,0,0,0.2);">
+      <h3 style="margin:0 0 16px;">⚙️ Налаштування</h3>
+      <label for="mapyTokenInput" style="display:block; margin-bottom:6px; font-size:0.9rem; color:#555;">Mapy.cz API
+        Token</label>
+      <input id="mapyTokenInput" type="text" placeholder="Введіть ваш токен..."
+        style="width:100%; box-sizing:border-box; padding:8px 12px; border:1px solid #ccc; border-radius:8px; font-size:0.95rem; margin-bottom:16px;" />
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button id="settingsCancelBtn"
+          style="padding:8px 18px; border:1px solid #ccc; border-radius:8px; background:#f5f5f5; cursor:pointer;">Скасувати</button>
+        <button id="settingsSaveBtn"
+          style="padding:8px 18px; border:none; border-radius:8px; background:#1a73e8; color:#fff; cursor:pointer; font-weight:600;">Зберегти</button>
       </div>
     </div>
+  </div>
 
 
-    <div id="main-view">
-      <div class="header">
-        <div class="header-title-group">
-          <h2>Мій маршрут</h2>
-          <span class="count-badge" id="count">0</span>
-        </div>
-        <button id="collapse-btn" onclick="toggleHeaderCollapse()" title="Згорнути/Розгорнути">
-          <span id="collapse-icon">▲</span>
-        </button>
+  <div id="city-order-modal">
+    <div id="city-order-content">
+      <h3>🏙️ Порядок населених пунктів</h3>
+      <p style="color: #666; font-size: 14px; margin: 0 0 15px 0;">Перетягніть міста для зміни порядку маршруту</p>
+
+      <div class="input-wrapper" style="margin: 10px 0 15px 0;">
+        <input type="text" id="city-order-input" placeholder="Додати НП..." autocomplete="off" />
+        <div id="city-order-autocomplete" class="autocomplete-dropdown"></div>
+        <button class="modal-btn modal-btn-primary" onclick="saveCityToStorage()" style="margin-left: 10px;">ОК</button>
+      </div>
+      <div id="city-order-list"></div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-secondary" onclick="closeCityOrderModal()">Скасувати</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="main-view">
+    <div class="header">
+      <div class="header-title-group">
+        <h2>Мій маршрут</h2>
+        <span class="count-badge" id="count">0</span>
+      </div>
+      <button id="collapse-btn" onclick="toggleHeaderCollapse()" title="Згорнути/Розгорнути">
+        <span id="collapse-icon">▲</span>
+      </button>
+      <div class="heder_right">
         <div id="header-stats">
           <div class="stat-time" id="stat-time">--:--</div>
           <div class="stat-dist" id="stat-dist">-- км</div>
         </div>
+        <button id="settingsBtn" title="Налаштування"
+          style="font-size:1.3rem; background:none; border:none; cursor:pointer; padding:4px 8px;">⚙️</button>
       </div>
 
-
-      <div id="collapsible-section">
-        <div class="input-row">
-          <div class="input-wrapper">
-            <input type="text" id="address-input" placeholder="Введіть адресу..." autocomplete="off" />
-            <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
-          </div>
-          <button id="geo-btn" onclick="addCurrentLocation()">
-            <span id="geo-icon">📍</span>
-            <div id="geo-spinner" class="spinner"></div>
-          </button>
-        </div>
-        <div class="city-order-add-btn-container">
-          <button id="clear-input-btn" onclick="clearAddressInput()">🗑️ Очистити поле</button>
-          <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
-        </div>
-      </div>
-
-
-      <ul id="address-list"></ul>
-
-
-      <div class="action-grid">
-        <button id="sort-btn" onclick="optimizePointsOrder()">🔃 Сортувати</button>
-        <button class="sort-city-btn" onclick="calculateDistancesToFirst10()">📏 Оптимізувати</button>
-        <button id="np-btn" onclick="openCityOrderModal()">🏙️ НП</button>
-        <button id="clear-btn" onclick="clearAllPoints()">🗑️ Очистити</button>
-        <!-- <button id="map-btn" onclick="openMap()">🗺 Мапа</button> -->
-      </div>
-
-
-      <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
     </div>
 
 
-    <script src="script.js"></script>
+    <div id="collapsible-section">
+      <div class="input-row">
+        <div class="input-wrapper">
+          <input type="text" id="address-input" placeholder="Введіть адресу..." autocomplete="off" />
+          <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+        </div>
+        <button id="geo-btn" onclick="addCurrentLocation()">
+          <span id="geo-icon">📍</span>
+          <div id="geo-spinner" class="spinner"></div>
+        </button>
+      </div>
+      <div class="city-order-add-btn-container">
+        <button id="clear-input-btn" onclick="clearAddressInput()">🗑️ Очистити поле</button>
+        <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
+      </div>
+    </div>
+
+
+    <ul id="address-list"></ul>
+
+
+    <div class="action-grid">
+      <button id="sort-btn" onclick="optimizePointsOrder()">🔃 Сортувати</button>
+      <button class="sort-city-btn" onclick="calculateDistancesToFirst10()">📏 Оптимізувати</button>
+      <button id="np-btn" onclick="openCityOrderModal()">🏙️ НП</button>
+      <button id="clear-btn" onclick="clearAllPoints()">🗑️ Очистити</button>
+      <!-- <button id="map-btn" onclick="openMap()">🗺 Мапа</button> -->
+    </div>
+
+
+    <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
+  </div>
+
+
+  <script src="script.js"></script>
 </body>
+
 </html>
