@@ -21,21 +21,31 @@ document.addEventListener("DOMContentLoaded", function () {
   const settingsSaveBtn = document.getElementById('settingsSaveBtn');
   const settingsCancelBtn = document.getElementById('settingsCancelBtn');
   const mapyTokenInput = document.getElementById('mapyTokenInput');
+  const timePerPointInput = document.getElementById('timePerPointInput');
 
   // Відкрити модалку
-  settingsBtn.addEventListener('click', () => {
-    mapyTokenInput.value = localStorage.getItem('mapyCzToken') || '';
-    settingsModal.style.display = 'flex';
-  });
+settingsBtn.addEventListener('click', () => {
+  // Токен
+  mapyTokenInput.value = localStorage.getItem('mapyCzToken') || '';
+
+  // Час на точку — підставити з localStorage або дефолт 10
+  const savedTime = localStorage.getItem('timePerPointMinutes');
+  timePerPointInput.value = savedTime !== null ? savedTime : '10';
+
+  settingsModal.style.display = 'flex';
+});
 
   // Зберегти токен
   settingsSaveBtn.addEventListener('click', () => {
     const token = mapyTokenInput.value.trim();
+    const timePerPoint = parseInt(timePerPointInput.value) || 3;
     if (token) {
       localStorage.setItem('mapyCzToken', token);
     } else {
       localStorage.removeItem('mapyCzToken');
     }
+
+    localStorage.setItem('timePerPointMinutes', String(timePerPoint));
     settingsModal.style.display = 'none';
   });
 
@@ -236,6 +246,7 @@ async function calculateDistancesToFirst10() {
                 lon: item.point.lon,
                 lat: item.point.lat,
                 label: item.point.label,
+                duplicateCount: item.point.duplicateCount || 0,
                 completed: item.point.completed || false
             });
             console.log(`${position}. ${item.point.label}`);
@@ -1979,6 +1990,17 @@ function removePoint(i) {
       "background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 10px; font-weight: 600; color: #27ae60;";
     summary.innerHTML = `📊 Загалом: ${totalKm} км, ${totalTimeStr}`;
     list.appendChild(summary);
+
+    const totalPoints = routeChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+    const deliveryTotalMins = 3 * totalPoints;
+    const deliveryH = Math.floor(deliveryTotalMins / 60);
+    const deliveryM = deliveryTotalMins % 60;
+    const deliveryTimeStr = deliveryH > 0 ? `${deliveryH}г ${deliveryM}хв` : `${deliveryM}хв`;
+
+    const deliveryBlock = document.createElement('div');
+    deliveryBlock.style.cssText = 'background:#e3f2fd;padding:15px;border-radius:10px;margin-top:8px;font-weight:600;color:#1565c0;font-size:14px;';
+    deliveryBlock.innerHTML = `📦 Час на доручення: ${deliveryTimeStr} <span style="font-weight:400;font-size:12px;color:#777">(${totalPoints} × 3 хв)</span>`;
+    list.appendChild(deliveryBlock);
   }
 
   function closeChunksModal() {
