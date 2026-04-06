@@ -45,9 +45,22 @@
         Token</label>
       <input id="mapyTokenInput" type="text" placeholder="Введіть ваш токен..."
         style="width:100%; box-sizing:border-box; padding:8px 12px; border:1px solid #ccc; border-radius:8px; font-size:0.95rem; margin-bottom:16px;" />
-      <label for="timePerPointInput" style="display:block; margin-bottom:6px; font-size:0.9rem; color:#555;">Час на точку (хв)</label>
-<input id="timePerPointInput" type="number" min="1" max="120" step="5" placeholder="10"
-  style="width:100%; box-sizing:border-box; padding:8px 12px; border:1px solid #ccc; border-radius:8px; font-size:0.95rem; margin-bottom:16px;" />  
+      <label for="timePerPointInput" style="display:block; margin-bottom:6px; font-size:0.9rem; color:#555;">Час на
+        точку (хв)</label>
+      <input id="timePerPointInput" type="number" min="1" max="120" step="5" placeholder="10"
+        style="width:100%; box-sizing:border-box; padding:8px 12px; border:1px solid #ccc; border-radius:8px; font-size:0.95rem; margin-bottom:16px;" />
+      <label style="display:block; margin-bottom:6px; font-size:0.9rem; color:#555;">
+        Відкриття точки
+      </label>
+
+      <div id="pointOpenProviderSwitcher" class="settings-switcher">
+        <button type="button" class="settings-switch-option active" data-provider="mapy">
+          Mapy.cz
+        </button>
+        <button type="button" class="settings-switch-option" data-provider="google">
+          Google Maps
+        </button>
+      </div>
       <div style="display:flex; gap:10px; justify-content:flex-end;">
         <button id="settingsCancelBtn"
           style="padding:8px 18px; border:1px solid #ccc; border-radius:8px; background:#f5f5f5; cursor:pointer;">Скасувати</button>
@@ -129,6 +142,7 @@
 
     <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
   </div>
+
 
 
   <script src="script.js"></script>

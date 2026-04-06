@@ -917,3 +917,38 @@ button:active {
 .modal-actions button:last-child {
   background: #6c757d;
 }
+.settings-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.settings-switch-option {
+  padding: 10px 12px;
+  border: 1px solid #d7dce5;
+  border-radius: 10px;
+  background: #f5f7fa;
+  color: #2c3e50;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-switch-option.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-color: transparent;
+}
+.travel-time {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: var(--text-xs, 0.7rem);
+    color: var(--color-text-muted, #888);
+    font-weight: 500;
+    background: var(--color-surface-offset, #f0f0f0);
+    border-radius: 999px;
+    padding: 1px 7px;
+    vertical-align: middle;
+    white-space: nowrap;
+}

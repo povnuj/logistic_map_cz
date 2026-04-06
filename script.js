@@ -22,32 +22,48 @@ document.addEventListener("DOMContentLoaded", function () {
   const settingsCancelBtn = document.getElementById('settingsCancelBtn');
   const mapyTokenInput = document.getElementById('mapyTokenInput');
   const timePerPointInput = document.getElementById('timePerPointInput');
+  const pointOpenProviderSwitcher = document.getElementById('pointOpenProviderSwitcher');
+  const pointOpenProviderButtons = document.querySelectorAll('#pointOpenProviderSwitcher .settings-switch-option');
+  let pointOpenProvider = 'mapy';
 
   // Відкрити модалку
 settingsBtn.addEventListener('click', () => {
-  // Токен
   mapyTokenInput.value = localStorage.getItem('mapyCzToken') || '';
-
-  // Час на точку — підставити з localStorage або дефолт 10
   const savedTime = localStorage.getItem('timePerPointMinutes');
-  timePerPointInput.value = savedTime !== null ? savedTime : '10';
+  timePerPointInput.value = savedTime !== null ? savedTime : 10;
+
+  pointOpenProvider = localStorage.getItem('pointOpenProvider') || 'mapy';
+  updatePointOpenProviderUI(pointOpenProvider);
 
   settingsModal.style.display = 'flex';
 });
 
-  // Зберегти токен
-  settingsSaveBtn.addEventListener('click', () => {
-    const token = mapyTokenInput.value.trim();
-    const timePerPoint = parseInt(timePerPointInput.value) || 3;
-    if (token) {
-      localStorage.setItem('mapyCzToken', token);
-    } else {
-      localStorage.removeItem('mapyCzToken');
-    }
-
-    localStorage.setItem('timePerPointMinutes', String(timePerPoint));
-    settingsModal.style.display = 'none';
+pointOpenProviderButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    pointOpenProvider = btn.dataset.provider === 'google' ? 'google' : 'mapy';
+    updatePointOpenProviderUI(pointOpenProvider);
   });
+});
+
+function updatePointOpenProviderUI(provider) {
+  pointOpenProviderButtons.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.provider === provider);
+  });
+}
+
+  // Зберегти токен
+settingsSaveBtn.addEventListener('click', () => {
+  const token = mapyTokenInput.value.trim();
+  const timePerPoint = parseInt(timePerPointInput.value || 3);
+
+  if (token) localStorage.setItem('mapyCzToken', token);
+  else localStorage.removeItem('mapyCzToken');
+
+  localStorage.setItem('timePerPointMinutes', String(timePerPoint));
+  localStorage.setItem('pointOpenProvider', pointOpenProvider);
+
+  settingsModal.style.display = 'none';
+});
 
   // Закрити без збереження
   settingsCancelBtn.addEventListener('click', () => {
@@ -259,6 +275,24 @@ async function calculateDistancesToFirst10() {
     
     points.length = 0;
     points.push(...sortedArray);
+    updateProgressModal('⏱ Розраховуємо час між точками...', 0, sortedArray.length);
+
+for (let i = 1; i < sortedArray.length; i++) {
+    updateProgressModal('⏱ Час між точками', i, sortedArray.length);
+    try {
+        const route = await calculateRoute(
+            [
+                { lon: sortedArray[i - 1].lon, lat: sortedArray[i - 1].lat },
+                { lon: sortedArray[i].lon, lat: sortedArray[i].lat }
+            ],
+            false
+        );
+        await new Promise(r => setTimeout(r, 200));
+        sortedArray[i].travelTimeFromPrev = route ? Math.round(route.time / 60) : null;
+    } catch (e) {
+        sortedArray[i].travelTimeFromPrev = null;
+    }
+}
     
     savePointsToStorage();
     renderList();
@@ -276,6 +310,132 @@ async function calculateDistancesToFirst10() {
     
     alert(`✅ Готово!\n\nОброблено: ${totalPoints} точок\nНП: ${cityNames.length}\n\nТочки відсортовано та збережено!`);
 }
+
+async function calculateDistancesWithLookahead() {
+    if (points.length < 2) {
+        alert('Потрібно мінімум 2 точки!');
+        return;
+    }
+
+    // Спочатку запускаємо стандартну оптимізацію
+    await calculateDistancesToFirst10();
+
+    // Після базової оптимізації — застосовуємо lookahead-досортування
+    if (points.length < 3) return;
+
+    showProgressModal('🔍 Lookahead: перевірка наступних 2 точок...');
+
+    let improved = true;
+    let passCount = 0;
+    const MAX_PASSES = 3;
+
+    while (improved && passCount < MAX_PASSES) {
+        improved = false;
+        passCount++;
+
+        updateProgressModal(`Lookahead прохід ${passCount}/${MAX_PASSES}`, 0, points.length - 1);
+
+        for (let i = 1; i < points.length - 1; i++) {
+            const current = points[i - 1];
+            const next1 = points[i];
+            const next2 = points[i + 1] || null;
+
+            if (!next2) continue;
+
+            updateProgressModal(
+                `Lookahead прохід ${passCount}: перевірка точки ${i + 1}/${points.length - 1}`,
+                i,
+                points.length - 1,
+                `${next1.label.substring(0, 40)}...`
+            );
+
+            try {
+                // Варіант A: current → next1 → next2
+                const routeA1 = await calculateRoute(
+                    [{ lon: current.lon, lat: current.lat }, { lon: next1.lon, lat: next1.lat }],
+                    false
+                );
+                await new Promise(r => setTimeout(r, 200));
+
+                const routeA2 = await calculateRoute(
+                    [{ lon: next1.lon, lat: next1.lat }, { lon: next2.lon, lat: next2.lat }],
+                    false
+                );
+                await new Promise(r => setTimeout(r, 200));
+
+                // Варіант B: current → next2 → next1
+                const routeB1 = await calculateRoute(
+                    [{ lon: current.lon, lat: current.lat }, { lon: next2.lon, lat: next2.lat }],
+                    false
+                );
+                await new Promise(r => setTimeout(r, 200));
+
+                const routeB2 = await calculateRoute(
+                    [{ lon: next2.lon, lat: next2.lat }, { lon: next1.lon, lat: next1.lat }],
+                    false
+                );
+                await new Promise(r => setTimeout(r, 200));
+
+                if (!routeA1 || !routeA2 || !routeB1 || !routeB2) continue;
+
+                const distA = routeA1.distance + routeA2.distance;
+                const distB = routeB1.distance + routeB2.distance;
+
+                if (distB < distA) {
+                    // Варіант B коротший — міняємо місцями next1 і next2
+                    console.log(`🔄 Lookahead swap: точки ${i + 1} і ${i + 2}`);
+                    console.log(`   A: ${(distA / 1000).toFixed(2)} км → B: ${(distB / 1000).toFixed(2)} км`);
+
+                    // Зберігаємо travelTime для відображення
+                    points[i].travelTimeFromPrev = Math.round(routeB1.time / 60);
+                    points[i + 1].travelTimeFromPrev = Math.round(routeB2.time / 60);
+
+                    // Swap
+                    [points[i], points[i + 1]] = [points[i + 1], points[i]];
+
+                    improved = true;
+                }
+            } catch (error) {
+                console.error(`Lookahead помилка для точки ${i}:`, error);
+            }
+        }
+    }
+
+    // Після всіх перестановок — розраховуємо travelTime для ВСІХ точок
+    updateProgressModal('⏱ Розраховуємо час між точками...', 0, points.length);
+
+    for (let i = 1; i < points.length; i++) {
+        updateProgressModal(
+            '⏱ Розраховуємо час між точками...',
+            i,
+            points.length,
+            `${points[i].label.substring(0, 40)}...`
+        );
+
+        try {
+            const route = await calculateRoute(
+                [
+                    { lon: points[i - 1].lon, lat: points[i - 1].lat },
+                    { lon: points[i].lon, lat: points[i].lat }
+                ],
+                false
+            );
+            await new Promise(r => setTimeout(r, 200));
+
+            points[i].travelTimeFromPrev = route ? Math.round(route.time / 60) : null;
+        } catch (e) {
+            points[i].travelTimeFromPrev = null;
+        }
+    }
+
+    savePointsToStorage();
+    renderList();
+
+    hideProgressModal();
+    alert(`✅ Lookahead оптимізація завершена! (${passCount} прохід(и))`);
+}
+
+// Expose globally
 
 // ✅ ФУНКЦІЇ ДЛЯ МОДАЛКИ ПРОГРЕСУ
 function showProgressModal() {
@@ -391,6 +551,8 @@ window.calculateDistancesToFirst10 = calculateDistancesToFirst10;
 window.showProgressModal = showProgressModal;
 window.updateProgressModal = updateProgressModal;
 window.hideProgressModal = hideProgressModal;
+window.calculateDistancesWithLookahead = calculateDistancesWithLookahead;
+
 
 
   function getLocalIndex(i, size = 17) {
@@ -718,7 +880,8 @@ function loadPointsFromStorage() {
               lat: p.lat,
               label: p.label,
               completed: p.completed || false,
-              duplicateCount: p.duplicateCount || undefined
+              duplicateCount: p.duplicateCount || undefined,
+              travelTimeFromPrev: p.travelTimeFromPrev != null ? p.travelTimeFromPrev : null
             };
           }
           
@@ -733,7 +896,8 @@ function loadPointsFromStorage() {
               lat: p.coords.y,
               label: p.label,
               completed: p.completed || false,
-              duplicateCount: p.duplicateCount || undefined
+              duplicateCount: p.duplicateCount || undefined,
+              travelTimeFromPrev: p.travelTimeFromPrev != null ? p.travelTimeFromPrev : null 
             };
           }
           
@@ -744,7 +908,8 @@ function loadPointsFromStorage() {
               lat: p.y,
               label: p.label,
               completed: p.completed || false,
-              duplicateCount: p.duplicateCount || undefined
+              duplicateCount: p.duplicateCount || undefined,
+              travelTimeFromPrev: p.travelTimeFromPrev != null ? p.travelTimeFromPrev : null
             };
           }
           
@@ -1237,7 +1402,12 @@ function renderList() {
       li.classList.add("completed");
     }
     
-    let addressHTML = `<div class="city-name">${parsed.city}</div>`;
+    let travelTimeHTML = '';
+if (i > 0 && p.travelTimeFromPrev != null) {
+    travelTimeHTML = `<span class="travel-time">🕐 ${p.travelTimeFromPrev} хв</span>`;
+}
+
+let addressHTML = `<div class="city-name">${parsed.city}${travelTimeHTML}</div>`;
     
     if (parsed.address) {
       addressHTML += `<div class="address-detail">${parsed.address}</div>`;
@@ -2140,29 +2310,27 @@ function removePoint(i) {
   }
 
 function navigateToPoint(index) {
-  if (index < 0 || index >= points.length) {
-    return alert("Некоректний індекс точки!");
-  }
-  
+  if (index < 0 || index >= points.length) return alert('Точка не знайдена!');
+
   const point = points[index];
-  
-  // Перемикаємо стан completed
   point.completed = !point.completed;
-  
-  console.log(`🧭 Точка ${index + 1}: ${point.completed ? 'виконана' : 'скасовано виконання'}`);
-  
-  // Зберігаємо зміни
+
   savePointsToStorage();
   renderList();
-  
-  // Якщо точка позначена як виконана - відкриваємо навігацію
+
   if (point.completed) {
-    // Використовуємо навігаційний URL який відразу запускає навігатор
-    let url = `https://mapy.cz/zakladni?x=${point.lon}&y=${point.lat}&source=coor&id=${point.lon},${point.lat}&ds=1`;
-    console.log("🧭 Навігація до точки:", point.label);
-    window.open(url, "_blank");
+    const provider = localStorage.getItem('pointOpenProvider') || 'mapy';
+    let url = '';
+
+    if (provider === 'google') {
+      url = `https://www.google.com/maps/search/?api=1&query=${point.lat},${point.lon}`;
+    } else {
+      url = `https://mapy.cz/zakladni?x=${point.lon}&y=${point.lat}&source=coor&id=${point.lon},${point.lat}&ds=1`;
+    }
+
+    window.open(url, '_blank');
   }
-  
+
   if (navigator.vibrate) navigator.vibrate(50);
 }
 
