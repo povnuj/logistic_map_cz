@@ -2392,7 +2392,7 @@ window.navigateToPoint = navigateToPoint;
         renderList();
         savePointsToStorage();
         calculateRouteStats();
-        recalcTravelTimes();
+        // recalcTravelTimes();
       },
     });
 
@@ -2433,6 +2433,7 @@ window.navigateToPoint = navigateToPoint;
   window.openCommentModal = openCommentModal;
   window.closeCommentModal = closeCommentModal;
   window.saveComment = saveComment;
+  window.recalcTravelTimes = recalcTravelTimes;
 
 
   const token = localStorage.getItem('mapyCzToken');
