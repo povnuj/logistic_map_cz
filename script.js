@@ -867,6 +867,31 @@ window.calculateDistancesWithLookahead = calculateDistancesWithLookahead;
     }
   }
 
+  async function recalcTravelTimes() {
+  points.forEach((p, i) => {
+    if (i === 0) p.travelTimeFromPrev = null;
+  });
+
+  for (let i = 1; i < points.length; i++) {
+    try {
+      const route = await calculateRoute(
+        [
+          { lon: points[i - 1].lon, lat: points[i - 1].lat },
+          { lon: points[i].lon, lat: points[i].lat }
+        ],
+        false
+      );
+      await new Promise(r => setTimeout(r, 150));
+      points[i].travelTimeFromPrev = route ? Math.round(route.time / 60) : null;
+    } catch (e) {
+      points[i].travelTimeFromPrev = null;
+    }
+  }
+
+  savePointsToStorage();
+  renderList();
+}
+
 function loadPointsFromStorage() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -2367,6 +2392,7 @@ window.navigateToPoint = navigateToPoint;
         renderList();
         savePointsToStorage();
         calculateRouteStats();
+        recalcTravelTimes();
       },
     });
 
