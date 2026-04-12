@@ -25,6 +25,108 @@ document.addEventListener("DOMContentLoaded", function () {
   const pointOpenProviderSwitcher = document.getElementById('pointOpenProviderSwitcher');
   const pointOpenProviderButtons = document.querySelectorAll('#pointOpenProviderSwitcher .settings-switch-option');
   let pointOpenProvider = 'mapy';
+  const fillFromCityBtn = document.getElementById('fill-from-city-btn');
+const npSelectModal = document.getElementById('np-select-modal');
+const npSelectList = document.getElementById('np-select-list');
+const npSelectCloseBtn = document.getElementById('np-select-close-btn');
+const addressInput = document.getElementById('address-input');
+
+function getCitiesFromStorage() {
+  let storedPoints = [];
+
+  try {
+    storedPoints = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch (e) {
+    storedPoints = [];
+  }
+
+  const uniqueCities = new Map();
+
+  storedPoints.forEach(point => {
+    if (!point || !point.label) return;
+
+    const parts = point.label.split(',').map(s => s.trim()).filter(Boolean);
+
+    if (parts.length >= 2) {
+      const city = parts[1];
+      const district = parts[2] || '';
+
+      if (!uniqueCities.has(city)) {
+        uniqueCities.set(city, {
+          city,
+          district
+        });
+      }
+    }
+  });
+
+  return Array.from(uniqueCities.values());
+}
+
+function fillAddressFromCity(cityData) {
+  if (!addressInput || !cityData?.city) return;
+
+  const value = cityData.district
+    ? `, ${cityData.city}, ${cityData.district}`
+    : `, ${cityData.city}`;
+
+  addressInput.value = value;
+  addressInput.focus();
+
+  requestAnimationFrame(() => {
+    addressInput.setSelectionRange(0, 0);
+  });
+
+  npSelectModal.style.display = 'none';
+}
+
+function renderNpSelectList() {
+  const cities = getCitiesFromStorage();
+
+  if (!cities.length) {
+    npSelectList.innerHTML = `<div class="city-item">Немає НП у localStorage</div>`;
+    return;
+  }
+
+  npSelectList.innerHTML = cities.map(item => `
+    <div class="city-item" data-city="${item.city}" data-district="${item.district || ''}">
+      <div class="city-info">
+        <div class="city-title">${item.city}</div>
+        <div class="city-count">${item.district || ''}</div>
+      </div>
+    </div>
+  `).join('');
+
+  npSelectList.querySelectorAll('.city-item').forEach(el => {
+    el.addEventListener('click', () => {
+      fillAddressFromCity({
+        city: el.dataset.city,
+        district: el.dataset.district
+      });
+    });
+  });
+}
+
+if (fillFromCityBtn) {
+  fillFromCityBtn.addEventListener('click', () => {
+    renderNpSelectList();
+    npSelectModal.style.display = 'flex';
+  });
+}
+
+if (npSelectCloseBtn) {
+  npSelectCloseBtn.addEventListener('click', () => {
+    npSelectModal.style.display = 'none';
+  });
+}
+
+if (npSelectModal) {
+  npSelectModal.addEventListener('click', (e) => {
+    if (e.target === npSelectModal) {
+      npSelectModal.style.display = 'none';
+    }
+  });
+}
 
   async function optimizeCityRoutes() {
     if (points.length < 3) {

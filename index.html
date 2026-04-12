@@ -122,6 +122,7 @@
         </button>
       </div>
       <div class="city-order-add-btn-container">
+        <button type="button" id="fill-from-city-btn" class="modal-btn modal-btn-primary">з нп</button>
         <button id="clear-input-btn" onclick="clearAddressInput()">🗑️ Очистити поле</button>
         <button id="add-btn" onclick="addAddress()">➕ Додати точку</button>
       </div>
@@ -144,6 +145,15 @@
 
     <button id="nav-btn" onclick="startNavigationApp()">🚀 ПОЇХАЛИ</button>
   </div>
+  <div id="np-select-modal" class="modal">
+  <div class="modal-content">
+    <h2>Оберіть населений пункт</h2>
+    <div id="np-select-list"></div>
+    <div class="modal-actions">
+      <button type="button" id="np-select-close-btn" class="modal-btn modal-btn-secondary">Скасувати</button>
+    </div>
+  </div>
+</div>
 
 
 
