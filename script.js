@@ -26,6 +26,118 @@ document.addEventListener("DOMContentLoaded", function () {
   const pointOpenProviderButtons = document.querySelectorAll('#pointOpenProviderSwitcher .settings-switch-option');
   let pointOpenProvider = 'mapy';
 
+  async function optimizeCityRoutes() {
+    if (points.length < 3) {
+        alert('Потрібно мінімум 3 точки!');
+        return;
+    }
+
+    showProgressModal();
+
+    const startPoint = points[0];
+
+    // Групуємо точки по НП (без стартової)
+    const cityGroups = {};
+    points.slice(1).forEach((p, index) => {
+        const parts = p.label.split(',').map(s => s.trim());
+        let city = null;
+        if (parts.length >= 2) city = parts[1];
+        else if (parts.length === 1) city = parts[0];
+        if (city) {
+            if (!cityGroups[city]) cityGroups[city] = [];
+            cityGroups[city].push(p);
+        }
+    });
+
+    const cityNames = Object.keys(cityGroups);
+    let totalPoints = 0;
+    cityNames.forEach(c => totalPoints += cityGroups[c].length);
+
+    console.log(`
+🔄 Nearest Neighbor оптимізація для ${cityNames.length} НП, ${totalPoints} точок`);
+
+    let processedCount = 0;
+    let lastPoint = startPoint;
+    const finalOrder = [];
+
+    for (let ci = 0; ci < cityNames.length; ci++) {
+        const cityName = cityNames[ci];
+        let remaining = [...cityGroups[cityName]];
+
+        updateProgressModal(
+            `НП ${ci + 1}/${cityNames.length}: ${cityName}`,
+            processedCount, totalPoints
+        );
+
+        console.log(`
+📌 ${cityName} (${remaining.length} точок) — Nearest Neighbor від: ${lastPoint.label}`);
+
+        const cityRoute = [];
+
+        while (remaining.length > 0) {
+            let bestIdx = 0;
+            let bestDist = Infinity;
+            let bestTime = 0;
+
+            updateProgressModal(
+                `НП ${ci + 1}/${cityNames.length}: ${cityName} — пошук найближчої`,
+                processedCount, totalPoints,
+                `Залишилось ${remaining.length} точок...`
+            );
+
+            for (let i = 0; i < remaining.length; i++) {
+                try {
+                    const route = await calculateRoute(
+                        [
+                            { lon: lastPoint.lon, lat: lastPoint.lat },
+                            { lon: remaining[i].lon, lat: remaining[i].lat }
+                        ],
+                        false
+                    );
+                    await new Promise(r => setTimeout(r, 200));
+
+                    if (route && route.distance < bestDist) {
+                        bestDist = route.distance;
+                        bestTime = route.time;
+                        bestIdx = i;
+                    }
+                } catch (e) {
+                    console.error(`Помилка для точки ${remaining[i].label}:`, e);
+                }
+            }
+
+            const chosen = remaining.splice(bestIdx, 1)[0];
+            chosen.travelTimeFromPrev = Math.round(bestTime / 60);
+            cityRoute.push(chosen);
+            lastPoint = chosen;
+            processedCount++;
+
+            console.log(`   ✅ ${cityRoute.length}. ${chosen.label} — ${(bestDist/1000).toFixed(2)} км (${chosen.travelTimeFromPrev} хв)`);
+
+            updateProgressModal(
+                `НП ${ci + 1}/${cityNames.length}: ${cityName}`,
+                processedCount, totalPoints,
+                `Додано: ${chosen.label.substring(0, 40)}...`
+            );
+        }
+
+        finalOrder.push(...cityRoute);
+    }
+
+    // Зберігаємо результат
+    points.length = 0;
+    points.push(startPoint);
+    points.push(...finalOrder);
+
+    savePointsToStorage();
+    renderList();
+    if (points.length >= 2) calculateRouteStats();
+
+    hideProgressModal();
+    alert(`✅ Маршрут по НП оптимізовано! (${finalOrder.length} точок)`);
+}
+
+window.optimizeCityRoutes = optimizeCityRoutes;
   // Відкрити модалку
 settingsBtn.addEventListener('click', () => {
   mapyTokenInput.value = localStorage.getItem('mapyCzToken') || '';
