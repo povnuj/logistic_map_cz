@@ -35,7 +35,7 @@ function getCitiesFromStorage() {
   let storedPoints = [];
 
   try {
-    storedPoints = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    storedPoints = JSON.parse(localStorage.getItem('mapczCityOrder') || '[]');
   } catch (e) {
     storedPoints = [];
   }
