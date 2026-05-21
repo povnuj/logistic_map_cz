@@ -2549,44 +2549,28 @@ function removePoint(i) {
   }
 
 function navigateToPoint(index) {
-    if (index < 0 || index >= points.length) return alert('Точка не знайдена!');
-    const point = points[index];
+  if (index < 0 || index >= points.length) return alert('Точка не знайдена!');
 
-    point.completed = !point.completed;
-    savePointsToStorage();
-    renderList();
+  const point = points[index];
+  point.completed = !point.completed;
 
-    if (point.completed) {
-        const provider = localStorage.getItem('pointOpenProvider') || 'mapy';
+  savePointsToStorage();
+  renderList();
 
-        if (provider === 'google') {
-            const url = `https://www.google.com/maps/search/?api=1&query=${point.lat},${point.lon}`;
-            window.open(url, '_blank');
-            if (navigator.vibrate) navigator.vibrate(50);
-            return;
-        }
+  if (point.completed) {
+    const provider = localStorage.getItem('pointOpenProvider') || 'mapy';
+    let url = '';
 
-        if (!navigator.geolocation) {
-            alert('GPS недоступний');
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                const startLon = position.coords.longitude;
-                const startLat = position.coords.latitude;
-                const url = `https://mapy.com/fncv1/route?start=${startLon},${startLat}&end=${point.lon},${point.lat}&routeType=car_fast`;
-                window.location.href = url;
-                if (navigator.vibrate) navigator.vibrate(50);
-            },
-            function() {
-                const url = `https://mapy.com/fncv1/route?end=${point.lon},${point.lat}&routeType=car_fast`;
-                window.location.href = url;
-                if (navigator.vibrate) navigator.vibrate(50);
-            },
-            { enableHighAccuracy: true }
-        );
+    if (provider === 'google') {
+      url = `https://www.google.com/maps/search/?api=1&query=${point.lat},${point.lon}`;
+    } else {
+      url = `https://mapy.cz/zakladni?x=${point.lon}&y=${point.lat}&source=coor&id=${point.lon},${point.lat}&ds=1`;
     }
+
+    window.open(url, '_blank');
+  }
+
+  if (navigator.vibrate) navigator.vibrate(50);
 }
 
 
