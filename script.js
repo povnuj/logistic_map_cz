@@ -2539,7 +2539,7 @@ function removePoint(i) {
           return p.lon + "," + p.lat;
         })
         .join(";");
-      url += "&waypoints=" + waypointsStr;
+      url += "&navigate=true&waypoints=" + waypointsStr;
     }
 
     url += "&routeType=car_fast&navigate=true";
@@ -2564,7 +2564,7 @@ function navigateToPoint(index) {
     if (provider === 'google') {
       url = `https://www.google.com/maps/search/?api=1&query=${point.lat},${point.lon}`;
     } else {
-      url = `https://mapy.cz/zakladni?x=${point.lon}&y=${point.lat}&source=coor&id=${point.lon},${point.lat}&ds=1`;
+      url = `https://mapy.cz/zakladni?x=${point.lon}&y=${point.lat}&source=coor&id=${point.lon},${point.lat}&ds=1&navigate=true`;
     }
 
     window.open(url, '_blank');
