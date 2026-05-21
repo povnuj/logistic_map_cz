@@ -2443,7 +2443,7 @@ function removePoint(i) {
       url += "&waypoints=" + waypointsStr;
     }
 
-    url += "&routeType=car_fast&navigate=true";
+    url += "&routeType=car_fast";
 
     console.log("Запускаємо маршрут:", url);
     window.open(url, "_blank");
@@ -2542,7 +2542,7 @@ function removePoint(i) {
       url += "&waypoints=" + waypointsStr;
     }
 
-    url += "&routeType=car_fast";
+    url += "&routeType=car_fast&navigate=true";
 
     console.log("Запускаємо маршрут:", url);
     window.open(url, "_blank");
