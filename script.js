@@ -2549,28 +2549,32 @@ function removePoint(i) {
   }
 
 function navigateToPoint(index) {
-  if (index < 0 || index >= points.length) return alert('Точка не знайдена!');
+    if (index < 0 || index >= points.length) return alert('Точка не знайдена!');
+    const point = points[index];
 
-  const point = points[index];
-  point.completed = !point.completed;
+    point.completed = !point.completed;
+    savePointsToStorage();
+    renderList();
 
-  savePointsToStorage();
-  renderList();
+    if (point.completed) {
+        const provider = localStorage.getItem('pointOpenProvider') || 'mapy';
+        let url;
 
-  if (point.completed) {
-    const provider = localStorage.getItem('pointOpenProvider') || 'mapy';
-    let url = '';
+        if (provider === 'google') {
+            url = `https://www.google.com/maps/search/?api=1&query=${point.lat},${point.lon}`;
+        } else {
+            url = `https://mapy.cz/zakladni?x=${point.lon}&y=${point.lat}&source=coor&id=${point.lon},${point.lat}&ds=1&navigate=true`;
+        }
 
-    if (provider === 'google') {
-      url = `https://www.google.com/maps/search/?api=1&query=${point.lat},${point.lon}`;
-    } else {
-      url = `https://mapy.cz/zakladni?x=${point.lon}&y=${point.lat}&source=coor&id=${point.lon},${point.lat}&ds=1&navigate=true`;
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isMobile) {
+            window.location.href = url;
+        } else {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        if (navigator.vibrate) navigator.vibrate(50);
     }
-
-    window.open(url, '_blank');
-  }
-
-  if (navigator.vibrate) navigator.vibrate(50);
 }
 
 
