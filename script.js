@@ -2539,10 +2539,10 @@ function removePoint(i) {
           return p.lon + "," + p.lat;
         })
         .join(";");
-      url += "&navigate=true&waypoints=" + waypointsStr;
+      url += "&waypoints=" + waypointsStr;
     }
 
-    url += "&routeType=car_fast&navigate=true";
+    url += "&routeType=car_fast";
 
     console.log("Запускаємо маршрут:", url);
     window.open(url, "_blank");
