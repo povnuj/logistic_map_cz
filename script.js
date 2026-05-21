@@ -2558,22 +2558,34 @@ function navigateToPoint(index) {
 
     if (point.completed) {
         const provider = localStorage.getItem('pointOpenProvider') || 'mapy';
-        let url;
 
         if (provider === 'google') {
-            url = `https://www.google.com/maps/search/?api=1&query=${point.lat},${point.lon}`;
-        } else {
-            url = `https://mapy.cz/zakladni?x=${point.lon}&y=${point.lat}&source=coor&id=${point.lon},${point.lat}&ds=1&navigate=true`;
+            const url = `https://www.google.com/maps/search/?api=1&query=${point.lat},${point.lon}`;
+            window.open(url, '_blank');
+            if (navigator.vibrate) navigator.vibrate(50);
+            return;
         }
 
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        if (isMobile) {
-            window.location.href = url;
-        } else {
-            window.open(url, '_blank', 'noopener,noreferrer');
+        if (!navigator.geolocation) {
+            alert('GPS недоступний');
+            return;
         }
 
-        if (navigator.vibrate) navigator.vibrate(50);
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const startLon = position.coords.longitude;
+                const startLat = position.coords.latitude;
+                const url = `https://mapy.com/fncv1/route?start=${startLon},${startLat}&end=${point.lon},${point.lat}&routeType=car_fast`;
+                window.location.href = url;
+                if (navigator.vibrate) navigator.vibrate(50);
+            },
+            function() {
+                const url = `https://mapy.com/fncv1/route?end=${point.lon},${point.lat}&routeType=car_fast`;
+                window.location.href = url;
+                if (navigator.vibrate) navigator.vibrate(50);
+            },
+            { enableHighAccuracy: true }
+        );
     }
 }
 
