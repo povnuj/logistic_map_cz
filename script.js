@@ -893,7 +893,7 @@ window.calculateDistancesWithLookahead = calculateDistancesWithLookahead;
           const finish = segment[segment.length - 1];
           const waypoints = segment.slice(1, -1);
 
-          let url = `${API_BASE}/v1/routing/route?start=${start.lon},${start.lat}&end=${finish.lon},${finish.lat}&routeType=car_fast&apikey=${API_KEY}`;
+          let url = `${API_BASE}/v1/routing/route?start=${start.lon},${start.lat}&end=${finish.lon},${finish.lat}&routeType=car_fast&navigate=true&apikey=${API_KEY}`;
 
           if (returnGeometry) {
             url += "&format=polyline";
